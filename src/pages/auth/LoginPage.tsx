@@ -67,16 +67,27 @@ const LoginPage = () => {
           accessToken: response.accessToken,
           refreshToken: response.refreshToken,
         },
-        response.user
+        {
+          id: response.userId,
+          username: response.username,
+          email: response.email,
+          firstName: response.firstName,
+          lastName: response.lastName,
+          roles: response.roles
+        }
       )
       
       // Redireciona para o dashboard após login bem-sucedido
       // Redirects to dashboard after successful login
       navigate('/dashboard')
-    } catch (err) {
+    } catch (err: any) {
       // Trata erros de autenticação
       // Handles authentication errors
-      setError('Credenciais inválidas. Por favor, tente novamente. / Invalid credentials. Please try again.')
+      if (err.response?.status === 401) {
+        setError('Credenciais inválidas. Por favor, tente novamente. / Invalid credentials. Please try again.')
+      } else {
+        setError('Erro ao conectar ao servidor. Tente novamente mais tarde. / Error connecting to server. Please try again later.')
+      }
       console.error('Erro de login / Login error:', err)
     } finally {
       setIsLoading(false)

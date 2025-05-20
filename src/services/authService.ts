@@ -16,13 +16,12 @@ interface LoginCredentials {
 interface AuthResponse {
   accessToken: string
   refreshToken: string
-  user: {
-    id: string
-    username: string
-    email: string
-    name: string
-    role: string
-  }
+  userId: string
+  username: string
+  email: string
+  firstName: string
+  lastName: string
+  roles: string[]
 }
 
 /**
@@ -34,12 +33,12 @@ class AuthService {
    * Realiza o login do usuário
    * Performs user login
    * 
-   * @param credentials - Credenciais do usuário (username/email e senha)
+   * @param credentials - Credenciais do usuário (username e senha)
    * @returns Promise com os dados de autenticação
    */
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     try {
-      const response = await apiClient.post<AuthResponse>('/api/auth/login', credentials)
+      const response = await apiClient.post<AuthResponse>('/auth/login', credentials)
       return response.data
     } catch (error) {
       console.error('Erro ao realizar login / Error performing login:', error)
@@ -51,9 +50,13 @@ class AuthService {
    * Realiza o logout do usuário
    * Performs user logout
    */
-  async logout(): Promise<void> {
+  async logout(token: string): Promise<void> {
     try {
-      await apiClient.post('/api/auth/logout')
+      await apiClient.post('/auth/logout', null, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
     } catch (error) {
       console.error('Erro ao realizar logout / Error performing logout:', error)
       throw error
@@ -70,7 +73,7 @@ class AuthService {
   async refreshToken(refreshToken: string): Promise<{ accessToken: string; refreshToken: string }> {
     try {
       const response = await apiClient.post<{ accessToken: string; refreshToken: string }>(
-        '/api/auth/refresh',
+        '/auth/refresh',
         { refreshToken }
       )
       return response.data
@@ -86,9 +89,13 @@ class AuthService {
    * 
    * @returns Promise com o status de autenticação
    */
-  async checkAuth(): Promise<boolean> {
+  async checkAuth(token: string): Promise<boolean> {
     try {
-      await apiClient.get('/api/auth/check')
+      await apiClient.get('/auth/check', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
       return true
     } catch (error) {
       return false
