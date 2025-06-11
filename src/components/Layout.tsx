@@ -199,7 +199,7 @@ const Layout = ({ children }: LayoutProps) => {
                 {user?.firstName} {user?.lastName}
               </p>
               <p className="text-xs text-gray-500 truncate">
-                {user?.role}
+                {user?.roles?.[0] || 'User'}
               </p>
             </div>
           </div>

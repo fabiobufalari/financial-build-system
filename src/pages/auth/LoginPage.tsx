@@ -65,13 +65,18 @@ const LoginPage = () => {
         const userData = {
           id: '1',
           username: formData.username,
-          email: 'bufalari.fabio@gmail.com',
           firstName: 'Fabio',
           lastName: 'Bufalari',
-          role: 'Administrator'
+          email: 'bufalari.fabio@gmail.com',
+          roles: ['Administrator', 'Manager'] // Corrigido: roles como array
         }
         
-        login('mock-access-token', 'mock-refresh-token', userData)
+        const tokens = {
+          accessToken: 'mock-access-token',
+          refreshToken: 'mock-refresh-token'
+        }
+        
+        login(tokens, userData) // Corrigido: passando tokens e userData separadamente
         navigate('/dashboard')
       } else {
         throw new Error(t('login.errors.invalidCredentials'))
