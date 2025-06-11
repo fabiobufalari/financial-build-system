@@ -39,7 +39,7 @@ const resources = {
         company: "Company",
         employees: "Employees & Costs",
         suppliers: "Suppliers",
-        cashFlow: "Cash Flow",
+        cashflow: "Cash Flow",
         accountsPayable: "Accounts Payable",
         accountsReceivable: "Accounts Receivable",
         materials: "Building Materials",
@@ -47,20 +47,51 @@ const resources = {
         analytics: "Data Analytics",
         advanced: "Advanced Financial",
         integrations: "Integrations",
-        logout: "Logout"
+        logout: "Logout",
+        descriptions: {
+          dashboard: "Main dashboard with financial overview",
+          auth: "User authentication and access control",
+          company: "Company information and settings",
+          employees: "Employee management and cost tracking",
+          suppliers: "Supplier management and contracts",
+          cashflow: "Cash flow monitoring and projections",
+          accountsPayable: "Manage accounts payable",
+          accountsReceivable: "Manage accounts receivable",
+          materials: "Building materials calculation",
+          reports: "Financial reports and analytics",
+          analytics: "Advanced data analytics",
+          advanced: "Advanced financial tools",
+          integrations: "System integrations"
+        }
       },
       // Dashboard
       dashboard: {
         welcome: "Welcome",
-        activeProjects: "Active Projects",
-        totalRevenue: "Total Revenue",
-        cashFlow: "Cash Flow",
-        pendingPayments: "Pending Payments",
-        weatherAlerts: "Weather Alerts",
-        newProject: "New Project",
-        sendPhotos: "Send Photos",
-        manageTeams: "Manage Teams",
-        registerExpenses: "Register Expenses"
+        subtitle: "Financial system overview",
+        refresh: "Refresh",
+        refreshing: "Refreshing...",
+        vsLastMonth: "vs last month",
+        cards: {
+          activeProjects: "Active Projects",
+          totalRevenue: "Total Revenue",
+          cashFlow: "Cash Flow",
+          pendingPayments: "Pending Payments"
+        },
+        financialAnalysis: "Financial Analysis",
+        chartPlaceholder: "Budget vs Expenses chart will be displayed here",
+        insights: {
+          title: "Financial Insights",
+          positive: "December 2024 analysis: 16% below planned budget, indicating good financial management. Continue monitoring to maintain positive trend."
+        },
+        projectMap: "Project Map",
+        analysis: {
+          budget: "Budget vs Expenses",
+          materials: "Material Costs",
+          profitability: "Profitability",
+          reports: "reports",
+          items: "items",
+          metrics: "metrics"
+        }
       },
       // Clima
       weather: {
@@ -106,7 +137,7 @@ const resources = {
         company: "Empresa",
         employees: "Funcionários e Custos",
         suppliers: "Fornecedores",
-        cashFlow: "Fluxo de Caixa",
+        cashflow: "Fluxo de Caixa",
         accountsPayable: "Contas a Pagar",
         accountsReceivable: "Contas a Receber",
         materials: "Materiais de Construção",
@@ -114,20 +145,51 @@ const resources = {
         analytics: "Análise de Dados",
         advanced: "Financeiro Avançado",
         integrations: "Integrações",
-        logout: "Sair"
+        logout: "Sair",
+        descriptions: {
+          dashboard: "Dashboard principal com visão financeira",
+          auth: "Autenticação e controle de acesso",
+          company: "Informações e configurações da empresa",
+          employees: "Gestão de funcionários e custos",
+          suppliers: "Gestão de fornecedores e contratos",
+          cashflow: "Monitoramento e projeções de fluxo de caixa",
+          accountsPayable: "Gerenciar contas a pagar",
+          accountsReceivable: "Gerenciar contas a receber",
+          materials: "Cálculo de materiais de construção",
+          reports: "Relatórios e análises financeiras",
+          analytics: "Análise avançada de dados",
+          advanced: "Ferramentas financeiras avançadas",
+          integrations: "Integrações do sistema"
+        }
       },
       // Dashboard
       dashboard: {
         welcome: "Bem-vindo",
-        activeProjects: "Projetos Ativos",
-        totalRevenue: "Receita Total",
-        cashFlow: "Fluxo de Caixa",
-        pendingPayments: "Pagamentos Pendentes",
-        weatherAlerts: "Alertas de Clima",
-        newProject: "Novo Projeto",
-        sendPhotos: "Enviar Fotos",
-        manageTeams: "Gerenciar Equipes",
-        registerExpenses: "Registrar Despesas"
+        subtitle: "Visão geral do sistema financeiro",
+        refresh: "Atualizar",
+        refreshing: "Atualizando...",
+        vsLastMonth: "vs mês anterior",
+        cards: {
+          activeProjects: "Projetos Ativos",
+          totalRevenue: "Receita Total",
+          cashFlow: "Fluxo de Caixa",
+          pendingPayments: "Pagamentos Pendentes"
+        },
+        financialAnalysis: "Análise Financeira",
+        chartPlaceholder: "Gráfico de Orçamento vs Despesas será exibido aqui",
+        insights: {
+          title: "Insights Financeiros",
+          positive: "Análise de dezembro 2024: 16% abaixo do orçamento planejado, indicando boa gestão financeira. Continue monitorando para manter a tendência positiva."
+        },
+        projectMap: "Mapa de Projetos",
+        analysis: {
+          budget: "Orçamento vs Despesas",
+          materials: "Custos de Materiais",
+          profitability: "Rentabilidade",
+          reports: "relatórios",
+          items: "itens",
+          metrics: "métricas"
+        }
       },
       // Clima
       weather: {
