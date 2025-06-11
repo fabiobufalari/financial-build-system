@@ -9,7 +9,7 @@ const resources = {
     translation: {
       // Login
       login: {
-        title: "Financial Recovery System",
+        title: "Strong Financial Building System",
         subtitle: "Habermatt Construction",
         username: "Username",
         usernamePlaceholder: "Enter your username",
@@ -107,7 +107,7 @@ const resources = {
     translation: {
       // Login
       login: {
-        title: "Sistema de Recuperação Financeira",
+        title: "Sistema Financeiro de Construção Forte",
         subtitle: "Habermatt Construction",
         username: "Usuário",
         usernamePlaceholder: "Digite seu usuário",

@@ -175,7 +175,7 @@ const Layout = ({ children }: LayoutProps) => {
               <span className="text-white font-bold">⚡</span>
             </div>
             <span className="font-semibold text-gray-900 hidden sm:block">
-              Financial Recovery
+              Strong Financial Building
             </span>
           </div>
           <button
