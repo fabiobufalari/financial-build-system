@@ -1,240 +1,227 @@
-import React, { useState, useEffect } from 'react';
-import { FiHome, FiDollarSign, FiTrendingUp, FiCalendar, FiMap, FiCloud, FiUsers, FiCamera, FiBarChart2, FiPlus } from 'react-icons/fi';
-import { useAuthStore } from '../../stores/authStore';
-import { dashboardService } from '../../services/dashboardService';
-import ProjectMap from '../../components/dashboard/ProjectMap';
-import WeatherWidget from '../../components/dashboard/WeatherWidget';
-import FinancialAnalysis from '../../components/dashboard/FinancialAnalysis';
-import ExpenseModal from '../../components/dashboard/ExpenseModal';
+import { useTranslation } from 'react-i18next'
+import { FiHome, FiTrendingUp, FiDollarSign, FiClock, FiRefreshCw } from 'react-icons/fi'
+import WeatherWidget from '../../components/WeatherWidget'
+import { mockFinancialData, mockProjectsData, formatCurrency, formatPercentage } from '../../utils/mockData'
+import { useState } from 'react'
 
 /**
- * Dashboard principal do sistema de recuperação financeira
- * Main dashboard for the financial recovery system
+ * Página principal do dashboard com dados financeiros e widgets
+ * Main dashboard page with financial data and widgets
  */
-const Dashboard: React.FC = () => {
-  const { user } = useAuthStore();
-  const [loading, setLoading] = useState(true);
-  const [projectStats, setProjectStats] = useState({
-    active: 0,
-    pending: 0,
-    paused: 0,
-    completed: 0
-  });
-  const [financialStats, setFinancialStats] = useState({
-    totalBudget: 0,
-    totalExpenses: 0,
-    materialCosts: 0,
-    laborCosts: 0,
-    projectedProfit: 0
-  });
-  const [showExpenseModal, setShowExpenseModal] = useState(false);
+const Dashboard = () => {
+  const { t } = useTranslation()
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
-  // Efeito para carregar dados do dashboard
-  // Effect to load dashboard data
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        setLoading(true);
-        
-        // Obter estatísticas de projetos
-        // Get project statistics
-        const projectStatsData = await dashboardService.getProjectStats();
-        setProjectStats(projectStatsData);
-        
-        // Obter estatísticas financeiras
-        // Get financial statistics
-        const financialStatsData = await dashboardService.getFinancialStats();
-        setFinancialStats(financialStatsData);
-        
-        setLoading(false);
-      } catch (error) {
-        console.error('Erro ao carregar dados do dashboard / Error loading dashboard data:', error);
-        setLoading(false);
-      }
-    };
-    
-    fetchDashboardData();
-  }, []);
+  const handleRefresh = async () => {
+    setIsRefreshing(true)
+    // Simula carregamento de dados
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    setIsRefreshing(false)
+  }
 
-  // Formatar valores monetários
-  // Format monetary values
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-CA', {
-      style: 'currency',
-      currency: 'CAD'
-    }).format(value);
-  };
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active': return 'text-green-600 bg-green-100'
+      case 'negotiation': return 'text-blue-600 bg-blue-100'
+      case 'paused': return 'text-orange-600 bg-orange-100'
+      default: return 'text-gray-600 bg-gray-100'
+    }
+  }
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'active': return t('projects.status.active')
+      case 'negotiation': return t('projects.status.negotiation')
+      case 'paused': return t('projects.status.paused')
+      default: return status
+    }
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Cabeçalho / Header */}
-      <header className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white shadow-lg">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex justify-between items-center">
+    <div className="p-6 space-y-6">
+      {/* Header com boas-vindas */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">
+            {t('dashboard.welcome')}, Fabio
+          </h1>
+          <p className="text-gray-600 mt-1">
+            {t('dashboard.subtitle')}
+          </p>
+          <p className="text-sm text-gray-500">
+            {new Date().toLocaleDateString('pt-BR', { 
+              weekday: 'long', 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric' 
+            })}
+          </p>
+        </div>
+        <button
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+          title={t('dashboard.refresh')}
+        >
+          <FiRefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          {isRefreshing ? t('dashboard.refreshing') : t('dashboard.refresh')}
+        </button>
+      </div>
+
+      {/* Cards financeiros principais */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Projetos Ativos */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold">Sistema de Recuperação Financeira</h1>
-              <p className="text-blue-100">Habermehl Construction</p>
+              <p className="text-sm font-medium text-gray-600">{t('dashboard.cards.activeProjects')}</p>
+              <p className="text-3xl font-bold text-gray-900 mt-2">
+                {mockFinancialData.activeProjects.value}
+              </p>
+              <p className="text-sm text-green-600 mt-1">
+                {formatPercentage(mockFinancialData.activeProjects.change)} {t('dashboard.vsLastMonth')}
+              </p>
             </div>
-            <div className="flex items-center space-x-4">
-              <div className="text-right">
-                <p className="font-medium">Bem-vindo, {user?.firstName || 'Usuário'}</p>
-                <p className="text-sm text-blue-200">{user?.roles?.join(', ') || 'Usuário'}</p>
-              </div>
-              <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center text-white font-bold">
-                {user?.firstName?.[0] || 'U'}
-              </div>
+            <div className="p-3 bg-blue-100 rounded-lg">
+              <FiHome className="w-6 h-6 text-blue-600" />
             </div>
           </div>
         </div>
-      </header>
 
-      {/* Conteúdo principal / Main content */}
-      <main className="container mx-auto px-4 py-8">
-        {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        {/* Receita Total */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">{t('dashboard.cards.totalRevenue')}</p>
+              <p className="text-3xl font-bold text-gray-900 mt-2">
+                {formatCurrency(mockFinancialData.totalRevenue.value)}
+              </p>
+              <p className="text-sm text-green-600 mt-1">
+                {formatPercentage(mockFinancialData.totalRevenue.change)} {t('dashboard.vsLastMonth')}
+              </p>
+            </div>
+            <div className="p-3 bg-green-100 rounded-lg">
+              <FiDollarSign className="w-6 h-6 text-green-600" />
+            </div>
           </div>
-        ) : (
-          <>
-            {/* Cartões de estatísticas / Statistics cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-blue-500 hover:shadow-lg transition-shadow">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="text-gray-500 text-sm">Projetos Ativos</p>
-                    <p className="text-2xl font-bold text-gray-800">{projectStats.active}</p>
-                  </div>
-                  <div className="p-3 bg-blue-100 rounded-full text-blue-600">
-                    <FiHome className="h-6 w-6" />
-                  </div>
-                </div>
-              </div>
-              
-              <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-green-500 hover:shadow-lg transition-shadow">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="text-gray-500 text-sm">Orçamento Total</p>
-                    <p className="text-2xl font-bold text-gray-800">{formatCurrency(financialStats.totalBudget)}</p>
-                  </div>
-                  <div className="p-3 bg-green-100 rounded-full text-green-600">
-                    <FiDollarSign className="h-6 w-6" />
-                  </div>
-                </div>
-              </div>
-              
-              <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-purple-500 hover:shadow-lg transition-shadow">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="text-gray-500 text-sm">Custos de Materiais</p>
-                    <p className="text-2xl font-bold text-gray-800">{formatCurrency(financialStats.materialCosts)}</p>
-                  </div>
-                  <div className="p-3 bg-purple-100 rounded-full text-purple-600">
-                    <FiBarChart2 className="h-6 w-6" />
-                  </div>
-                </div>
-              </div>
-              
-              <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-amber-500 hover:shadow-lg transition-shadow">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="text-gray-500 text-sm">Lucro Projetado</p>
-                    <p className="text-2xl font-bold text-gray-800">{formatCurrency(financialStats.projectedProfit)}</p>
-                  </div>
-                  <div className="p-3 bg-amber-100 rounded-full text-amber-600">
-                    <FiTrendingUp className="h-6 w-6" />
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            {/* Seções principais / Main sections */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-              {/* Gráfico financeiro / Financial chart */}
-              <div className="lg:col-span-2 bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow">
-                <h2 className="text-xl font-bold text-gray-800 mb-4">Análise Financeira</h2>
-                <div className="h-80">
-                  <FinancialAnalysis />
-                </div>
-              </div>
-              
-              {/* Alertas de clima / Weather alerts */}
-              <div className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-bold text-gray-800">Alertas de Clima</h2>
-                  <FiCloud className="h-5 w-5 text-blue-500" />
-                </div>
-                
-                <div className="h-80">
-                  <WeatherWidget />
-                </div>
-              </div>
-            </div>
-            
-            {/* Seção de mapa e projetos / Map and projects section */}
-            <div className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow mb-8">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold text-gray-800">Mapa de Projetos</h2>
-                <FiMap className="h-5 w-5 text-blue-500" />
-              </div>
-              
-              <div className="h-96">
-                <ProjectMap />
-              </div>
-            </div>
-            
-            {/* Ações rápidas / Quick actions */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <button 
-                className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow flex flex-col items-center justify-center"
-                onClick={() => window.location.href = '/projects/new'}
-              >
-                <div className="p-3 bg-blue-100 rounded-full text-blue-600 mb-3">
-                  <FiHome className="h-6 w-6" />
-                </div>
-                <p className="font-medium text-gray-800">Novo Projeto</p>
-              </button>
-              
-              <button 
-                className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow flex flex-col items-center justify-center"
-                onClick={() => setShowExpenseModal(true)}
-              >
-                <div className="p-3 bg-green-100 rounded-full text-green-600 mb-3">
-                  <FiDollarSign className="h-6 w-6" />
-                </div>
-                <p className="font-medium text-gray-800">Registrar Despesa</p>
-              </button>
-              
-              <button 
-                className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow flex flex-col items-center justify-center"
-                onClick={() => window.location.href = '/projects/photos'}
-              >
-                <div className="p-3 bg-purple-100 rounded-full text-purple-600 mb-3">
-                  <FiCamera className="h-6 w-6" />
-                </div>
-                <p className="font-medium text-gray-800">Enviar Fotos</p>
-              </button>
-              
-              <button 
-                className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow flex flex-col items-center justify-center"
-                onClick={() => window.location.href = '/teams'}
-              >
-                <div className="p-3 bg-amber-100 rounded-full text-amber-600 mb-3">
-                  <FiUsers className="h-6 w-6" />
-                </div>
-                <p className="font-medium text-gray-800">Gerenciar Equipes</p>
-              </button>
-            </div>
-          </>
-        )}
-      </main>
+        </div>
 
-      {/* Modal de despesa / Expense modal */}
-      <ExpenseModal 
-        isOpen={showExpenseModal} 
-        onClose={() => setShowExpenseModal(false)} 
-      />
+        {/* Fluxo de Caixa */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">{t('dashboard.cards.cashFlow')}</p>
+              <p className="text-3xl font-bold text-gray-900 mt-2">
+                {formatCurrency(mockFinancialData.cashFlow.value)}
+              </p>
+              <p className="text-sm text-green-600 mt-1">
+                {formatPercentage(mockFinancialData.cashFlow.change)} {t('dashboard.vsLastMonth')}
+              </p>
+            </div>
+            <div className="p-3 bg-purple-100 rounded-lg">
+              <FiTrendingUp className="w-6 h-6 text-purple-600" />
+            </div>
+          </div>
+        </div>
+
+        {/* Pagamentos Pendentes */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">{t('dashboard.cards.pendingPayments')}</p>
+              <p className="text-3xl font-bold text-gray-900 mt-2">
+                {formatCurrency(mockFinancialData.pendingPayments.value)}
+              </p>
+              <p className="text-sm text-red-600 mt-1">
+                {formatPercentage(mockFinancialData.pendingPayments.change)} {t('dashboard.vsLastMonth')}
+              </p>
+            </div>
+            <div className="p-3 bg-orange-100 rounded-lg">
+              <FiClock className="w-6 h-6 text-orange-600" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Layout principal com análise financeira e clima */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Análise Financeira */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Botões de análise */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+              {t('dashboard.financialAnalysis')}
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <button className="p-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all transform hover:scale-105">
+                <div className="text-sm font-medium">{t('dashboard.analysis.budget')}</div>
+                <div className="text-xs opacity-90 mt-1">15 {t('dashboard.analysis.reports')}</div>
+              </button>
+              <button className="p-4 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all transform hover:scale-105">
+                <div className="text-sm font-medium">{t('dashboard.analysis.materials')}</div>
+                <div className="text-xs opacity-90 mt-1">16 {t('dashboard.analysis.items')}</div>
+              </button>
+              <button className="p-4 bg-gradient-to-r from-teal-500 to-teal-600 text-white rounded-lg hover:from-teal-600 hover:to-teal-700 transition-all transform hover:scale-105">
+                <div className="text-sm font-medium">{t('dashboard.analysis.profitability')}</div>
+                <div className="text-xs opacity-90 mt-1">17 {t('dashboard.analysis.metrics')}</div>
+              </button>
+            </div>
+          </div>
+
+          {/* Gráfico placeholder */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="h-64 bg-gray-50 rounded-lg flex items-center justify-center">
+              <div className="text-center">
+                <FiTrendingUp className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                <p className="text-gray-600">{t('dashboard.chartPlaceholder')}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Insights Financeiros */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">
+              {t('dashboard.insights.title')}
+            </h3>
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <p className="text-green-800">
+                {t('dashboard.insights.positive')}
+              </p>
+            </div>
+          </div>
+
+          {/* Mapa de Projetos */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              {t('dashboard.projectMap')}
+            </h3>
+            <div className="space-y-3">
+              {mockProjectsData.map((project) => (
+                <div key={project.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(project.status)}`}>
+                      {getStatusText(project.status)}
+                    </div>
+                    <span className="font-medium text-gray-900">{project.name}</span>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-medium text-gray-900">{project.progress}%</div>
+                    <div className="text-xs text-gray-500">{formatCurrency(project.budget)}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Widget de Clima */}
+        <div className="lg:col-span-1">
+          <WeatherWidget />
+        </div>
+      </div>
     </div>
-  );
-};
+  )
+}
 
-export default Dashboard;
+export default Dashboard
+
