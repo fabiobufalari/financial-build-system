@@ -1,4 +1,5 @@
 // Mock data para demonstração do sistema
+// Mock data for system demonstration
 export const mockFinancialData = {
   activeProjects: {
     value: 15,
@@ -23,11 +24,11 @@ export const mockFinancialData = {
 }
 
 export const mockCompanyData = {
-  name: 'Habermatt Construction',
+  name: 'Financial Solutions',
   cnpj: '12.345.678/0001-90',
   address: '123 Construction Ave, Toronto, ON',
   phone: '+1 (416) 555-0123',
-  email: 'contact@habermatt.ca',
+  email: 'bufalari.fabio@gmail.com',
   employees: 45,
   activeProjects: 12,
   monthlyRevenue: 125000
@@ -124,4 +125,3 @@ export const formatCurrency = (value: number): string => {
 export const formatPercentage = (value: number): string => {
   return `${value > 0 ? '+' : ''}${value}%`
 }
-

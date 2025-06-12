@@ -1,16 +1,18 @@
 // Configuração de internacionalização completa
+// Configuration of complete internationalization
 import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 import LanguageDetector from 'i18next-browser-languagedetector'
 
 // Traduções para todos os idiomas
+// Translations for all languages
 const resources = {
   en: {
     translation: {
       // Login
       login: {
-        title: "Strong Financial Building System",
-        subtitle: "Habermatt Construction",
+        title: "Financial Solutions",
+        subtitle: "Financial Solutions",
         username: "Username",
         usernamePlaceholder: "Enter your username",
         password: "Password",
@@ -107,8 +109,8 @@ const resources = {
     translation: {
       // Login
       login: {
-        title: "Sistema Financeiro de Construção Forte",
-        subtitle: "Habermatt Construction",
+        title: "Financial Solutions",
+        subtitle: "Financial Solutions",
         username: "Usuário",
         usernamePlaceholder: "Digite seu usuário",
         password: "Senha",
@@ -205,8 +207,8 @@ const resources = {
     translation: {
       // Login
       login: {
-        title: "वित्तीय रिकवरी सिस्टम",
-        subtitle: "हैबरमैट कंस्ट्रक्शन",
+        title: "Financial Solutions",
+        subtitle: "Financial Solutions",
         username: "उपयोगकर्ता नाम",
         password: "पासवर्ड",
         loginButton: "साइन इन",
@@ -258,8 +260,8 @@ const resources = {
     translation: {
       // Login
       login: {
-        title: "财务恢复系统",
-        subtitle: "哈伯马特建筑",
+        title: "Financial Solutions",
+        subtitle: "Financial Solutions",
         username: "用户名",
         password: "密码",
         loginButton: "登录",
@@ -326,4 +328,3 @@ i18n
   })
 
 export default i18n
-

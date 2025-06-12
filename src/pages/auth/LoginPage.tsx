@@ -23,6 +23,7 @@ const LoginPage = () => {
   const [success, setSuccess] = useState(false)
 
   // Redireciona se já estiver autenticado
+  // Redirects if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
       navigate('/dashboard')
@@ -36,7 +37,7 @@ const LoginPage = () => {
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
-    if (error) setError('') // Limpa erro ao digitar
+    if (error) setError('') // Limpa erro ao digitar // Clears error when typing
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -46,6 +47,7 @@ const LoginPage = () => {
 
     try {
       // Validação básica
+      // Basic validation
       if (!formData.username.trim()) {
         throw new Error(t('login.errors.usernameRequired'))
       }
@@ -54,21 +56,24 @@ const LoginPage = () => {
       }
 
       // Simula autenticação
+      // Simulates authentication
       await new Promise(resolve => setTimeout(resolve, 1500))
       
       // Verifica credenciais (mock)
+      // Verifies credentials (mock)
       if (formData.username === 'fabiobufalari' && formData.password === '12345678!') {
         setSuccess(true)
         await new Promise(resolve => setTimeout(resolve, 500))
         
         // Armazena os tokens e dados do usuário
+        // Stores tokens and user data
         const userData = {
           id: '1',
           username: formData.username,
           firstName: 'Fabio',
           lastName: 'Bufalari',
           email: 'bufalari.fabio@gmail.com',
-          roles: ['Administrator', 'Manager'] // Corrigido: roles como array
+          roles: ['Administrator', 'Manager'] // Corrigido: roles como array // Fixed: roles as array
         }
         
         const tokens = {
@@ -76,7 +81,7 @@ const LoginPage = () => {
           refreshToken: 'mock-refresh-token'
         }
         
-        login(tokens, userData) // Corrigido: passando tokens e userData separadamente
+        login(tokens, userData) // Corrigido: passando tokens e userData separadamente // Fixed: passing tokens and userData separately
         navigate('/dashboard')
       } else {
         throw new Error(t('login.errors.invalidCredentials'))
@@ -106,10 +111,10 @@ const LoginPage = () => {
             </div>
           </div>
           <h1 className="text-3xl font-bold text-white mb-2">
-            Strong Financial Building System
+            Financial Solutions
           </h1>
           <p className="text-blue-200">
-            Habermatt Construction
+            Financial Solutions
           </p>
         </div>
 
@@ -227,7 +232,7 @@ const LoginPage = () => {
         {/* Footer */}
         <div className="text-center mt-8">
           <p className="text-blue-200 text-sm">
-            © 2025 Habermatt Construction. {t('login.footer')}
+            © 2025 Fabio Bufalari. {t('login.footer')} <a href="mailto:bufalari.fabio@gmail.com" className="hover:underline">bufalari.fabio@gmail.com</a>
           </p>
         </div>
       </div>
@@ -236,4 +241,3 @@ const LoginPage = () => {
 }
 
 export default LoginPage
-
