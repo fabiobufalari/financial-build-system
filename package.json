@@ -1,7 +1,7 @@
 {
   "name": "financial-recovery-system",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,6 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@deck.gl/core": "^9.1.12",
+    "@deck.gl/layers": "^9.1.12",
+    "@deck.gl/react": "^9.1.12",
     "@hookform/resolvers": "^3.3.2",
     "axios": "^1.6.2",
     "chart.js": "^4.4.0",

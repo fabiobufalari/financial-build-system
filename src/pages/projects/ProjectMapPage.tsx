@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { useState, useEffect, useRef } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import { Icon } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { FiMap, FiLayers, FiMaximize, FiMinimize } from 'react-icons/fi';
@@ -10,6 +10,24 @@ import { mockProjectMapData } from '../../utils/projectMapData';
 interface MapViewControlProps {
   is3D: boolean;
   mapView: string;
+  onApply3D: () => void;
+}
+
+// Interface para propriedades de projeto no mapa 3D
+interface ProjectProperties {
+  name: string;
+  status: string;
+  height: number;
+}
+
+// Interface para feature do GeoJSON
+interface ProjectFeature {
+  type: string;
+  geometry: {
+    type: string;
+    coordinates: number[];
+  };
+  properties: ProjectProperties;
 }
 
 /**
@@ -21,6 +39,11 @@ const ProjectMapPage = () => {
   const [mapView, setMapView] = useState('standard');
   const [is3D, setIs3D] = useState(false);
   const [isMenuCollapsed, setIsMenuCollapsed] = useState(false);
+  const mapRef = useRef(null);
+  const [mapCenter, setMapCenter] = useState([43.651070, -79.347015]);
+  const [mapZoom, setMapZoom] = useState(12);
+  const [mapReady, setMapReady] = useState(false);
+  const [mapKey, setMapKey] = useState(Date.now()); // Para forçar re-renderização do mapa
 
   // Emitir evento para colapsar/expandir o menu lateral
   // Emit event to collapse/expand sidebar
@@ -36,6 +59,12 @@ const ProjectMapPage = () => {
     // Save preference in localStorage
     localStorage.setItem('sidebarCollapsed', String(isMenuCollapsed));
   }, [isMenuCollapsed]);
+
+  // Forçar atualização do mapa quando o tipo de visualização mudar
+  // Force map update when view type changes
+  useEffect(() => {
+    setMapKey(Date.now());
+  }, [mapView]);
 
   // Filtrar projetos com base na aba ativa
   // Filter projects based on active tab
@@ -83,17 +112,109 @@ const ProjectMapPage = () => {
     });
   };
 
+  // Aplicar modo 3D
+  // Apply 3D mode
+  const apply3DMode = () => {
+    if (is3D) {
+      // Implementação simplificada do modo 3D usando CSS 3D transforms
+      return (
+        <div 
+          className="absolute inset-0 bg-gray-100"
+          style={{ 
+            perspective: '1000px',
+            transformStyle: 'preserve-3d'
+          }}
+        >
+          <div 
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ 
+              backgroundImage: `url(https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/12/1491/2274)`,
+              transform: 'rotateX(45deg)',
+              transformOrigin: 'center center',
+              boxShadow: '0 10px 20px rgba(0,0,0,0.3)'
+            }}
+          >
+            {filteredProjects.map((project) => (
+              <div 
+                key={project.id}
+                className="absolute w-4 h-4 rounded-full transform -translate-x-2 -translate-y-2"
+                style={{
+                  left: `${50 + (project.coordinates[1] - mapCenter[1]) * 10}%`,
+                  top: `${50 - (project.coordinates[0] - mapCenter[0]) * 10}%`,
+                  backgroundColor: project.status === 'active' ? 'green' : 
+                                  project.status === 'paused' ? 'red' : 'yellow',
+                  boxShadow: '0 0 10px rgba(0,0,0,0.5)',
+                  height: project.status === 'active' ? '20px' : 
+                          project.status === 'paused' ? '10px' : '15px',
+                  width: project.status === 'active' ? '20px' : 
+                         project.status === 'paused' ? '10px' : '15px',
+                  zIndex: 1000,
+                  cursor: 'pointer'
+                }}
+                title={`${project.name} - ${project.client.name}`}
+              />
+            ))}
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
+
   // Componente para alternar a visualização do mapa
   // Component to toggle map view
-  const MapViewControl = ({ is3D, mapView }: MapViewControlProps) => {
-    // Simulação de controle de visualização 3D e tipos de mapa
-    // Simulation of 3D view control and map types
+  const MapViewControl = ({ is3D, mapView, onApply3D }: MapViewControlProps) => {
+    const map = useMap();
+    
     useEffect(() => {
-      console.log(`Modo 3D: ${is3D ? 'Ativado' : 'Desativado'}`);
-      console.log(`Tipo de mapa: ${mapView}`);
-    }, [is3D, mapView]);
+      if (map && mapReady) {
+        // Atualizar centro e zoom do mapa
+        setMapCenter([map.getCenter().lat, map.getCenter().lng]);
+        setMapZoom(map.getZoom());
+        
+        // Aplicar modo 3D se ativado
+        if (is3D) {
+          onApply3D();
+        }
+      }
+    }, [map, is3D, mapView, mapReady, onApply3D]);
 
     return null;
+  };
+
+  // Obter URL do tile com base no tipo de mapa
+  // Get tile URL based on map type
+  const getTileUrl = () => {
+    switch (mapView) {
+      case 'satellite':
+        // Usando Esri World Imagery para satélite
+        return 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+      case 'terrain':
+        // Usando OpenTopoMap para terreno
+        return 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png';
+      default:
+        // Usando OpenStreetMap para padrão
+        return 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+    }
+  };
+
+  // Obter atribuição do tile com base no tipo de mapa
+  // Get tile attribution based on map type
+  const getTileAttribution = () => {
+    switch (mapView) {
+      case 'satellite':
+        return 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community';
+      case 'terrain':
+        return '&copy; <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)';
+      default:
+        return '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+    }
+  };
+
+  // Quando o mapa estiver pronto
+  // When map is ready
+  const handleMapReady = () => {
+    setMapReady(true);
   };
 
   return (
@@ -188,102 +309,107 @@ const ProjectMapPage = () => {
 
       {/* Mapa */}
       {/* Map */}
-      <div className="bg-white rounded-lg shadow-lg overflow-hidden" style={{ height: '600px' }}>
-        <MapContainer style={{ height: '100%', width: '100%' }} zoom={12} center={[43.651070, -79.347015]}>
-          <TileLayer
-            url={mapView === 'satellite' 
-              ? 'https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'
-              : mapView === 'terrain'
-                ? 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png'
-                : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
-            }
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            subdomains={mapView === 'satellite' ? ['mt0', 'mt1', 'mt2', 'mt3'] : ['a', 'b', 'c']}
-          />
-          
-          <MapViewControl is3D={is3D} mapView={mapView} />
-          
-          {filteredProjects.map((project) => (
-            <Marker 
-              key={project.id} 
-              position={project.coordinates}
-              icon={getProjectIcon(project.status)}
-            >
-              <Popup>
-                <div className="p-2">
-                  <h3 className="font-bold text-lg">{project.name}</h3>
-                  <p className="text-gray-600">{project.address}</p>
-                  
-                  <div className="mt-2">
-                    <p className="font-semibold">Cliente:</p>
-                    <p>{project.client.name}</p>
-                    <p>{project.client.contact} - {project.client.phone}</p>
-                    <p>{project.client.email}</p>
-                  </div>
-                  
-                  {project.status === 'active' && project.assignedEmployees && (
-                    <div className="mt-2">
-                      <p className="font-semibold">Funcionários Alocados:</p>
-                      <ul className="list-disc pl-5">
-                        {project.assignedEmployees.map(empId => (
-                          <li key={empId}>{getEmployeeName(empId)}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  
-                  {project.status === 'paused' && project.pendingIssues && (
-                    <div className="mt-2">
-                      <p className="font-semibold">Pendências:</p>
-                      <ul className="list-disc pl-5">
-                        {project.pendingIssues.map((issue, index) => (
-                          <li key={index}>{issue}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  
-                  {project.status === 'negotiation' && project.requirements && (
-                    <div className="mt-2">
-                      <p className="font-semibold">Requisitos para Fechamento:</p>
-                      <ul className="list-disc pl-5">
-                        {project.requirements.map((req, index) => (
-                          <li key={index}>{req}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  
-                  <div className="mt-2">
-                    <p className="font-semibold">Status: 
-                      <span className={`ml-2 px-2 py-1 rounded-full text-xs ${
-                        project.status === 'active' ? 'bg-green-100 text-green-800' :
-                        project.status === 'paused' ? 'bg-red-100 text-red-800' :
-                        'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {project.status === 'active' ? 'Em Andamento' :
-                         project.status === 'paused' ? 'Parado' :
-                         'Em Negociação'}
-                      </span>
-                    </p>
+      <div className="bg-white rounded-lg shadow-lg overflow-hidden" style={{ height: '600px', position: 'relative' }}>
+        {is3D ? (
+          apply3DMode()
+        ) : (
+          <MapContainer 
+            key={mapKey} 
+            style={{ height: '100%', width: '100%' }} 
+            zoom={12} 
+            center={[43.651070, -79.347015]}
+            whenReady={handleMapReady}
+            ref={mapRef}
+          >
+            <TileLayer
+              url={getTileUrl()}
+              attribution={getTileAttribution()}
+            />
+            
+            <MapViewControl is3D={is3D} mapView={mapView} onApply3D={apply3DMode} />
+            
+            {filteredProjects.map((project) => (
+              <Marker 
+                key={project.id} 
+                position={project.coordinates}
+                icon={getProjectIcon(project.status)}
+              >
+                <Popup>
+                  <div className="p-2">
+                    <h3 className="font-bold text-lg">{project.name}</h3>
+                    <p className="text-gray-600">{project.address}</p>
                     
-                    {project.progress > 0 && (
-                      <div className="mt-1">
-                        <div className="w-full bg-gray-200 rounded-full h-2.5">
-                          <div 
-                            className="bg-blue-600 h-2.5 rounded-full" 
-                            style={{ width: `${project.progress}%` }}
-                          ></div>
-                        </div>
-                        <p className="text-xs text-right mt-1">{project.progress}% concluído</p>
+                    <div className="mt-2">
+                      <p className="font-semibold">Cliente:</p>
+                      <p>{project.client.name}</p>
+                      <p>{project.client.contact} - {project.client.phone}</p>
+                      <p>{project.client.email}</p>
+                    </div>
+                    
+                    {project.status === 'active' && project.assignedEmployees && (
+                      <div className="mt-2">
+                        <p className="font-semibold">Funcionários Alocados:</p>
+                        <ul className="list-disc pl-5">
+                          {project.assignedEmployees.map(empId => (
+                            <li key={empId}>{getEmployeeName(empId)}</li>
+                          ))}
+                        </ul>
                       </div>
                     )}
+                    
+                    {project.status === 'paused' && project.pendingIssues && (
+                      <div className="mt-2">
+                        <p className="font-semibold">Pendências:</p>
+                        <ul className="list-disc pl-5">
+                          {project.pendingIssues.map((issue, index) => (
+                            <li key={index}>{issue}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    
+                    {project.status === 'negotiation' && project.requirements && (
+                      <div className="mt-2">
+                        <p className="font-semibold">Requisitos para Fechamento:</p>
+                        <ul className="list-disc pl-5">
+                          {project.requirements.map((req, index) => (
+                            <li key={index}>{req}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    
+                    <div className="mt-2">
+                      <p className="font-semibold">Status: 
+                        <span className={`ml-2 px-2 py-1 rounded-full text-xs ${
+                          project.status === 'active' ? 'bg-green-100 text-green-800' :
+                          project.status === 'paused' ? 'bg-red-100 text-red-800' :
+                          'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {project.status === 'active' ? 'Em Andamento' :
+                           project.status === 'paused' ? 'Parado' :
+                           'Em Negociação'}
+                        </span>
+                      </p>
+                      
+                      {project.progress > 0 && (
+                        <div className="mt-1">
+                          <div className="w-full bg-gray-200 rounded-full h-2.5">
+                            <div 
+                              className="bg-blue-600 h-2.5 rounded-full" 
+                              style={{ width: `${project.progress}%` }}
+                            ></div>
+                          </div>
+                          <p className="text-xs text-right mt-1">{project.progress}% concluído</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </Popup>
-            </Marker>
-          ))}
-        </MapContainer>
+                </Popup>
+              </Marker>
+            ))}
+          </MapContainer>
+        )}
       </div>
 
       {/* Legenda */}
@@ -304,6 +430,12 @@ const ProjectMapPage = () => {
             <span>Projetos em Negociação</span>
           </div>
         </div>
+      </div>
+      
+      {/* Versão do sistema */}
+      {/* System version */}
+      <div className="mt-4 text-right text-xs text-gray-500">
+        Versão 1.0.0
       </div>
     </div>
   );
