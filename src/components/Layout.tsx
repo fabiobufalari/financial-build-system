@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
@@ -16,7 +16,8 @@ import {
   FiLogOut,
   FiMenu,
   FiX,
-  FiShield
+  FiShield,
+  FiMap
 } from 'react-icons/fi'
 
 interface LayoutProps {
@@ -33,6 +34,28 @@ const Layout = ({ children }: LayoutProps) => {
   const location = useLocation()
   const { user, logout } = useAuthStore()
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+
+  // Verificar preferência do usuário para o menu lateral
+  // Check user preference for sidebar
+  useEffect(() => {
+    const savedPreference = localStorage.getItem('sidebarCollapsed')
+    if (savedPreference !== null) {
+      setIsSidebarCollapsed(savedPreference === 'true')
+    }
+    
+    // Escutar eventos de toggle do sidebar de outros componentes
+    // Listen for sidebar toggle events from other components
+    const handleToggleSidebar = (event: CustomEvent) => {
+      setIsSidebarCollapsed(event.detail.collapsed)
+    }
+    
+    window.addEventListener('toggleSidebar', handleToggleSidebar as EventListener)
+    
+    return () => {
+      window.removeEventListener('toggleSidebar', handleToggleSidebar as EventListener)
+    }
+  }, [])
 
   const menuItems = [
     {
@@ -108,6 +131,14 @@ const Layout = ({ children }: LayoutProps) => {
       description: t('menu.descriptions.materials')
     },
     {
+      name: t('menu.projectMap'),
+      path: '/project-map',
+      icon: FiMap,
+      color: 'text-blue-700',
+      bgColor: 'bg-blue-50',
+      description: t('menu.descriptions.projectMap')
+    },
+    {
       name: t('menu.reports'),
       path: '/financial-reports',
       icon: FiBarChart,
@@ -153,6 +184,12 @@ const Layout = ({ children }: LayoutProps) => {
 
   const isActive = (path: string) => location.pathname === path
 
+  const toggleSidebarCollapse = () => {
+    const newState = !isSidebarCollapsed
+    setIsSidebarCollapsed(newState)
+    localStorage.setItem('sidebarCollapsed', String(newState))
+  }
+
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Overlay para mobile */}
@@ -165,8 +202,9 @@ const Layout = ({ children }: LayoutProps) => {
 
       {/* Sidebar */}
       <div className={`
-        fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out
+        fixed lg:static inset-y-0 left-0 z-50 bg-white shadow-lg transform transition-all duration-300 ease-in-out
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        ${isSidebarCollapsed ? 'w-16' : 'w-64'}
       `}>
         {/* Header do Sidebar */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
@@ -174,36 +212,48 @@ const Layout = ({ children }: LayoutProps) => {
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold">⚡</span>
             </div>
-            <span className="font-semibold text-gray-900 hidden sm:block">
-              Financial Solutions
-            </span>
+            {!isSidebarCollapsed && (
+              <span className="font-semibold text-gray-900 hidden sm:block">
+                Financial Solutions
+              </span>
+            )}
           </div>
-          <button
-            onClick={() => setIsSidebarOpen(false)}
-            className="lg:hidden p-1 rounded-md hover:bg-gray-100"
-          >
-            <FiX className="w-5 h-5" />
-          </button>
+          <div className="flex items-center">
+            <button
+              onClick={toggleSidebarCollapse}
+              className="p-1 rounded-md hover:bg-gray-100 hidden lg:block"
+            >
+              {isSidebarCollapsed ? <FiMenu className="w-5 h-5" /> : <FiX className="w-5 h-5" />}
+            </button>
+            <button
+              onClick={() => setIsSidebarOpen(false)}
+              className="lg:hidden p-1 rounded-md hover:bg-gray-100"
+            >
+              <FiX className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Informações do Usuário */}
-        <div className="p-4 border-b border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-              <span className="text-blue-600 font-medium text-sm">
-                {user?.firstName?.[0]}{user?.lastName?.[0]}
-              </span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">
-                {user?.firstName} {user?.lastName}
-              </p>
-              <p className="text-xs text-gray-500 truncate">
-                {user?.roles?.[0] || 'User'}
-              </p>
+        {!isSidebarCollapsed && (
+          <div className="p-4 border-b border-gray-200">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                <span className="text-blue-600 font-medium text-sm">
+                  {user?.firstName?.[0]}{user?.lastName?.[0]}
+                </span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 truncate">
+                  {user?.firstName} {user?.lastName}
+                </p>
+                <p className="text-xs text-gray-500 truncate">
+                  {user?.roles?.[0] || 'User'}
+                </p>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Menu de Navegação */}
         <nav className="flex-1 overflow-y-auto p-4">
@@ -226,17 +276,19 @@ const Layout = ({ children }: LayoutProps) => {
                   title={item.description}
                 >
                   <Icon className={`w-5 h-5 flex-shrink-0 ${active ? item.color : 'text-gray-500'}`} />
-                  <div className="flex-1 min-w-0">
-                    <span className="text-sm font-medium truncate block">
-                      {item.name}
-                    </span>
-                    {active && (
-                      <span className="text-xs opacity-75 truncate block">
-                        {item.description}
+                  {!isSidebarCollapsed && (
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-medium truncate block">
+                        {item.name}
                       </span>
-                    )}
-                  </div>
-                  {active && (
+                      {active && (
+                        <span className="text-xs opacity-75 truncate block">
+                          {item.description}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  {active && !isSidebarCollapsed && (
                     <div className="w-2 h-2 bg-current rounded-full opacity-60" />
                   )}
                 </button>
@@ -249,10 +301,12 @@ const Layout = ({ children }: LayoutProps) => {
         <div className="p-4 border-t border-gray-200">
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3 py-2.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
+            className={`w-full flex items-center gap-3 px-3 py-2.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200 ${isSidebarCollapsed ? 'justify-center' : ''}`}
           >
             <FiLogOut className="w-5 h-5" />
-            <span className="text-sm font-medium">{t('menu.logout')}</span>
+            {!isSidebarCollapsed && (
+              <span className="text-sm font-medium">{t('menu.logout')}</span>
+            )}
           </button>
         </div>
       </div>
