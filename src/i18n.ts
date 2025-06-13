@@ -314,6 +314,106 @@ const resources = {
         suggestions: "建议"
       }
     }
+  },
+  fr: {
+    translation: {
+      // Login
+      login: {
+        title: "Financial Solutions",
+        subtitle: "Financial Solutions",
+        username: "Nom d'utilisateur",
+        usernamePlaceholder: "Entrez votre nom d'utilisateur",
+        password: "Mot de passe",
+        passwordPlaceholder: "Entrez votre mot de passe",
+        signIn: "Se connecter",
+        signingIn: "Connexion en cours...",
+        selectLanguage: "Sélectionner la langue",
+        success: "Connexion réussie!",
+        footer: "Tous droits réservés.",
+        demo: {
+          title: "Identifiants de démonstration:",
+          username: "Nom d'utilisateur",
+          password: "Mot de passe"
+        },
+        errors: {
+          usernameRequired: "Le nom d'utilisateur est requis",
+          passwordRequired: "Le mot de passe est requis",
+          invalidCredentials: "Nom d'utilisateur ou mot de passe invalide",
+          generic: "Erreur de connexion"
+        }
+      },
+      // Menu Lateral
+      menu: {
+        dashboard: "Tableau de bord",
+        auth: "Authentification",
+        company: "Entreprise",
+        employees: "Employés et coûts",
+        suppliers: "Fournisseurs",
+        cashflow: "Flux de trésorerie",
+        accountsPayable: "Comptes fournisseurs",
+        accountsReceivable: "Comptes clients",
+        materials: "Matériaux de construction",
+        projectMap: "Carte des projets",
+        reports: "Rapports financiers",
+        analytics: "Analyse de données",
+        advanced: "Finance avancée",
+        integrations: "Intégrations",
+        logout: "Déconnexion",
+        descriptions: {
+          dashboard: "Tableau de bord principal avec aperçu financier",
+          auth: "Authentification et contrôle d'accès",
+          company: "Informations et paramètres de l'entreprise",
+          employees: "Gestion des employés et suivi des coûts",
+          suppliers: "Gestion des fournisseurs et contrats",
+          cashflow: "Surveillance et projections de flux de trésorerie",
+          accountsPayable: "Gérer les comptes fournisseurs",
+          accountsReceivable: "Gérer les comptes clients",
+          materials: "Calcul des matériaux de construction",
+          projectMap: "Vue géographique de tous les projets",
+          reports: "Rapports et analyses financières",
+          analytics: "Analyse avancée des données",
+          advanced: "Outils financiers avancés",
+          integrations: "Intégrations du système"
+        }
+      },
+      // Dashboard
+      dashboard: {
+        welcome: "Bienvenue",
+        subtitle: "Aperçu du système financier",
+        refresh: "Actualiser",
+        refreshing: "Actualisation...",
+        vsLastMonth: "vs mois précédent",
+        cards: {
+          activeProjects: "Projets actifs",
+          totalRevenue: "Revenus totaux",
+          cashFlow: "Flux de trésorerie",
+          pendingPayments: "Paiements en attente"
+        },
+        financialAnalysis: "Analyse financière",
+        chartPlaceholder: "Le graphique Budget vs Dépenses sera affiché ici",
+        insights: {
+          title: "Aperçus financiers",
+          positive: "Analyse de décembre 2024: 16% en dessous du budget prévu, indiquant une bonne gestion financière. Continuez à surveiller pour maintenir la tendance positive."
+        },
+        projectMap: "Carte des projets",
+        analysis: {
+          budget: "Budget vs Dépenses",
+          materials: "Coûts des matériaux",
+          profitability: "Rentabilité",
+          reports: "rapports",
+          items: "éléments",
+          metrics: "métriques"
+        }
+      },
+      // Clima
+      weather: {
+        title: "Alertes météo",
+        temperature: "Température",
+        forecast: "Prévisions 7 jours",
+        alerts: "Alertes météorologiques",
+        suggestions: "Suggestions"
+      }
+    }
   }
 }
 

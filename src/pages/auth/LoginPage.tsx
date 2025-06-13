@@ -96,6 +96,7 @@ const LoginPage = () => {
   const languages = [
     { code: 'en', name: 'English', flag: '🇺🇸' },
     { code: 'pt', name: 'Português', flag: '🇧🇷' },
+    { code: 'fr', name: 'Français', flag: '🇫🇷' },
     { code: 'hi', name: 'हिन्दी', flag: '🇮🇳' },
     { code: 'zh', name: '中文', flag: '🇨🇳' }
   ]

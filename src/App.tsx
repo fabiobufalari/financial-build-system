@@ -18,11 +18,18 @@ import AdvancedPage from './pages/advanced/AdvancedPage';
 import IntegrationsPage from './pages/integrations/IntegrationsPage';
 import ProjectMapPage from './pages/projects/ProjectMapPage';
 
+/**
+ * Main application component with routing configuration
+ * Componente principal da aplicação com configuração de roteamento
+ */
 const App = () => {
   return (
     <Suspense fallback={<div>Loading...</div>}>
       <Routes>
+        {/* Public route for login - Rota pública para login */}
         <Route path="/login" element={<LoginPage />} />
+        
+        {/* Protected routes with layout - Rotas protegidas com layout */}
         <Route path="/" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
         <Route path="/dashboard" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
         <Route path="/auth" element={<ProtectedRoute><Layout><AuthPage /></Layout></ProtectedRoute>} />
