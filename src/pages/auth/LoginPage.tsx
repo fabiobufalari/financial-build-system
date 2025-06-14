@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { FiEye, FiEyeOff, FiLoader, FiCheck, FiX } from 'react-icons/fi'
 import { useAuthStore } from '../../stores/authStore'
 import { useNavigate } from 'react-router-dom'
+import { authService } from '../../services/authService'
 
 /**
  * Página de login com seleção de idiomas e design responsivo
@@ -55,37 +56,35 @@ const LoginPage = () => {
         throw new Error(t('login.errors.passwordRequired'))
       }
 
-      // Simula autenticação
-      // Simulates authentication
-      await new Promise(resolve => setTimeout(resolve, 1500))
+      // Usa o authService para autenticação
+      // Uses authService for authentication
+      const authResponse = await authService.login({
+        username: formData.username,
+        password: formData.password
+      })
       
-      // Verifica credenciais (mock)
-      // Verifies credentials (mock)
-      if (formData.username === 'fabiobufalari' && formData.password === '12345678!') {
-        setSuccess(true)
-        await new Promise(resolve => setTimeout(resolve, 500))
-        
-        // Armazena os tokens e dados do usuário
-        // Stores tokens and user data
-        const userData = {
-          id: '1',
-          username: formData.username,
-          firstName: 'Fabio',
-          lastName: 'Bufalari',
-          email: 'bufalari.fabio@gmail.com',
-          roles: ['Administrator', 'Manager'] // Corrigido: roles como array // Fixed: roles as array
-        }
-        
-        const tokens = {
-          accessToken: 'mock-access-token',
-          refreshToken: 'mock-refresh-token'
-        }
-        
-        login(tokens, userData) // Corrigido: passando tokens e userData separadamente // Fixed: passing tokens and userData separately
-        navigate('/dashboard')
-      } else {
-        throw new Error(t('login.errors.invalidCredentials'))
+      setSuccess(true)
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      // Armazena os tokens e dados do usuário
+      // Stores tokens and user data
+      const userData = {
+        id: authResponse.userId,
+        username: authResponse.username,
+        firstName: authResponse.firstName,
+        lastName: authResponse.lastName,
+        email: authResponse.email,
+        roles: authResponse.roles
       }
+      
+      const tokens = {
+        accessToken: authResponse.accessToken,
+        refreshToken: authResponse.refreshToken
+      }
+      
+      login(tokens, userData)
+      navigate('/dashboard')
+      
     } catch (err) {
       setError(err instanceof Error ? err.message : t('login.errors.generic'))
     } finally {
@@ -115,7 +114,7 @@ const LoginPage = () => {
             Financial Solutions
           </h1>
           <p className="text-blue-200">
-            Financial Solutions
+            Financial Recovery System
           </p>
         </div>
 
@@ -224,8 +223,9 @@ const LoginPage = () => {
               {t('login.demo.title')}
             </p>
             <div className="text-xs text-white/60 space-y-1">
-              <div><strong>{t('login.demo.username')}:</strong> fabiobufalari</div>
-              <div><strong>{t('login.demo.password')}:</strong> 12345678!</div>
+              <div><strong>Admin:</strong> fabiobufalari / 12345678!</div>
+              <div><strong>Admin:</strong> admin / admin123</div>
+              <div><strong>User:</strong> user / user123</div>
             </div>
           </div>
         </div>
@@ -242,3 +242,4 @@ const LoginPage = () => {
 }
 
 export default LoginPage
+
