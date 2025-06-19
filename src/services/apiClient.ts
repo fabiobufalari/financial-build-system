@@ -1,228 +1,240 @@
-import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios'
-import { useAuthStore } from '../stores/authStore'
+import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
+import { DEFAULT_API_CONFIG, DEMO_MODE } from '../config/apiConfig';
 
-/**
- * URL base para as requisições à API (modo mock)
- * Base URL for API requests (mock mode)
- */
-const API_BASE_URL = 'http://localhost:3001' // URL mock para desenvolvimento local
+// EN: Enhanced API client with authentication, retry logic, and demo mode support
+// PT: Cliente API aprimorado com autenticação, lógica de retry e suporte ao modo demo
 
-/**
- * Classe que gerencia as requisições HTTP para a API
- * Class that manages HTTP requests to the API
- */
+interface ApiResponse<T = any> {
+  data: T;
+  message?: string;
+  status: number;
+}
+
+interface ApiError {
+  message: string;
+  status: number;
+  code?: string;
+  details?: any;
+}
+
 class ApiClient {
-  private api: AxiosInstance
-  private mockMode: boolean = true // Modo mock ativado por padrão
-  
+  private client: AxiosInstance;
+  private retryCount = 0;
+  private maxRetries = DEFAULT_API_CONFIG.retries;
+
   constructor() {
-    /**
-     * Criação da instância do Axios com configurações padrão
-     * Creation of Axios instance with default settings
-     */
-    this.api = axios.create({
-      baseURL: API_BASE_URL,
+    this.client = axios.create({
+      timeout: DEFAULT_API_CONFIG.timeout,
       headers: {
         'Content-Type': 'application/json',
-      },
-      timeout: 5000, // Timeout de 5 segundos
-    })
-    
-    this.setupInterceptors()
+        'Accept': 'application/json'
+      }
+    });
+
+    this.setupInterceptors();
   }
-  
-  /**
-   * Configura os interceptors para adicionar token e tratar erros
-   * Sets up interceptors to add token and handle errors
-   */
+
   private setupInterceptors(): void {
-    // Interceptor de requisição para adicionar token de autenticação
-    // Request interceptor to add authentication token
-    this.api.interceptors.request.use(
+    // Request interceptor for authentication
+    // EN: Request interceptor to add authentication token
+    // PT: Interceptor de requisição para adicionar token de autenticação
+    this.client.interceptors.request.use(
       (config) => {
-        const { accessToken } = useAuthStore.getState()
-        
-        if (accessToken && !this.mockMode) {
-          config.headers.Authorization = `Bearer ${accessToken}`
+        const token = localStorage.getItem('accessToken');
+        if (token && !config.headers.Authorization) {
+          config.headers.Authorization = `Bearer ${token}`;
         }
-        
-        return config
+        return config;
       },
       (error) => Promise.reject(error)
-    )
-    
-    // Interceptor de resposta para tratar erros e refresh token
-    // Response interceptor to handle errors and refresh token
-    this.api.interceptors.response.use(
-      (response) => response,
+    );
+
+    // Response interceptor for error handling and token refresh
+    // EN: Response interceptor for error handling and automatic token refresh
+    // PT: Interceptor de resposta para tratamento de erros e renovação automática de token
+    this.client.interceptors.response.use(
+      (response) => {
+        this.retryCount = 0; // Reset retry count on successful response
+        return response;
+      },
       async (error: AxiosError) => {
-        // Em modo mock, não tenta refresh token
-        // In mock mode, don't try refresh token
-        if (this.mockMode) {
-          return Promise.reject(error)
-        }
-        
-        const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean }
-        
-        // Se o erro for 401 (Unauthorized) e não for uma tentativa de refresh
-        // If the error is 401 (Unauthorized) and not a refresh attempt
+        const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
+
+        // Handle 401 Unauthorized - attempt token refresh
         if (error.response?.status === 401 && !originalRequest._retry) {
-          originalRequest._retry = true
-          
+          originalRequest._retry = true;
+
           try {
-            const { refreshToken } = useAuthStore.getState()
-            
-            if (!refreshToken) {
-              // Se não houver refresh token, faz logout
-              // If there is no refresh token, logout
-              useAuthStore.getState().logout()
-              return Promise.reject(error)
+            const refreshToken = localStorage.getItem('refreshToken');
+            if (refreshToken && !DEMO_MODE) {
+              // Attempt to refresh token
+              const response = await axios.post('/auth/refresh', { refreshToken });
+              const { accessToken } = response.data;
+              
+              localStorage.setItem('accessToken', accessToken);
+              
+              // Retry original request with new token
+              if (originalRequest.headers) {
+                originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+              }
+              
+              return this.client(originalRequest);
             }
-            
-            // Tenta obter novos tokens com o refresh token
-            // Try to get new tokens with the refresh token
-            const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
-              refreshToken,
-            })
-            
-            const { accessToken, refreshToken: newRefreshToken } = response.data
-            
-            // Atualiza os tokens no store
-            // Update tokens in the store
-            useAuthStore.getState().updateTokens({
-              accessToken,
-              refreshToken: newRefreshToken,
-            })
-            
-            // Refaz a requisição original com o novo token
-            // Retry the original request with the new token
-            originalRequest.headers = {
-              ...originalRequest.headers,
-              Authorization: `Bearer ${accessToken}`,
-            }
-            
-            return this.api(originalRequest)
           } catch (refreshError) {
-            // Se falhar o refresh, faz logout
-            // If refresh fails, logout
-            useAuthStore.getState().logout()
-            return Promise.reject(refreshError)
+            // Refresh failed, redirect to login
+            this.handleAuthenticationFailure();
+            return Promise.reject(refreshError);
           }
         }
-        
-        return Promise.reject(error)
+
+        // Handle network errors with retry logic
+        if (this.shouldRetry(error) && this.retryCount < this.maxRetries) {
+          this.retryCount++;
+          const delay = Math.pow(2, this.retryCount) * 1000; // Exponential backoff
+          
+          await new Promise(resolve => setTimeout(resolve, delay));
+          return this.client(originalRequest);
+        }
+
+        return Promise.reject(this.formatError(error));
       }
-    )
+    );
   }
-  
-  /**
-   * Ativa ou desativa o modo mock
-   * Enables or disables mock mode
-   */
-  public setMockMode(enabled: boolean): void {
-    this.mockMode = enabled
+
+  private shouldRetry(error: AxiosError): boolean {
+    // Retry on network errors or 5xx server errors
+    return !error.response || (error.response.status >= 500 && error.response.status < 600);
   }
-  
-  /**
-   * Verifica se está em modo mock
-   * Checks if in mock mode
-   */
-  public isMockMode(): boolean {
-    return this.mockMode
-  }
-  
-  /**
-   * Realiza uma requisição GET
-   * Performs a GET request
-   * 
-   * @param url - URL da requisição / Request URL
-   * @param config - Configurações adicionais / Additional settings
-   * @returns Promise com a resposta / Promise with the response
-   */
-  public get<T = any>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
-    if (this.mockMode) {
-      console.warn(`Mock mode: GET ${url} - returning mock data`)
-      return Promise.resolve({
-        data: {} as T,
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config: config || {}
-      } as AxiosResponse<T>)
+
+  private formatError(error: AxiosError): ApiError {
+    if (error.response) {
+      return {
+        message: error.response.data?.message || error.message,
+        status: error.response.status,
+        code: error.response.data?.code,
+        details: error.response.data
+      };
+    } else if (error.request) {
+      return {
+        message: 'Network error - please check your connection',
+        status: 0,
+        code: 'NETWORK_ERROR'
+      };
+    } else {
+      return {
+        message: error.message,
+        status: 0,
+        code: 'UNKNOWN_ERROR'
+      };
     }
-    return this.api.get<T>(url, config)
   }
-  
-  /**
-   * Realiza uma requisição POST
-   * Performs a POST request
-   * 
-   * @param url - URL da requisição / Request URL
-   * @param data - Dados a serem enviados / Data to be sent
-   * @param config - Configurações adicionais / Additional settings
-   * @returns Promise com a resposta / Promise with the response
-   */
-  public post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
-    if (this.mockMode) {
-      console.warn(`Mock mode: POST ${url} - returning mock data`)
-      return Promise.resolve({
-        data: {} as T,
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config: config || {}
-      } as AxiosResponse<T>)
+
+  private handleAuthenticationFailure(): void {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('user');
+    
+    // Redirect to login page
+    if (window.location.pathname !== '/login') {
+      window.location.href = '/login';
     }
-    return this.api.post<T>(url, data, config)
   }
-  
-  /**
-   * Realiza uma requisição PUT
-   * Performs a PUT request
-   * 
-   * @param url - URL da requisição / Request URL
-   * @param data - Dados a serem enviados / Data to be sent
-   * @param config - Configurações adicionais / Additional settings
-   * @returns Promise com a resposta / Promise with the response
-   */
-  public put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
-    if (this.mockMode) {
-      console.warn(`Mock mode: PUT ${url} - returning mock data`)
-      return Promise.resolve({
-        data: {} as T,
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config: config || {}
-      } as AxiosResponse<T>)
+
+  // Public API methods
+  // EN: Public methods for making HTTP requests
+  // PT: Métodos públicos para fazer requisições HTTP
+
+  async get<T = any>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+    try {
+      const response: AxiosResponse<T> = await this.client.get(url, config);
+      return {
+        data: response.data,
+        status: response.status
+      };
+    } catch (error) {
+      throw error;
     }
-    return this.api.put<T>(url, data, config)
   }
-  
-  /**
-   * Realiza uma requisição DELETE
-   * Performs a DELETE request
-   * 
-   * @param url - URL da requisição / Request URL
-   * @param config - Configurações adicionais / Additional settings
-   * @returns Promise com a resposta / Promise with the response
-   */
-  public delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
-    if (this.mockMode) {
-      console.warn(`Mock mode: DELETE ${url} - returning mock data`)
-      return Promise.resolve({
-        data: {} as T,
-        status: 200,
-        statusText: 'OK',
-        headers: {},
-        config: config || {}
-      } as AxiosResponse<T>)
+
+  async post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+    try {
+      const response: AxiosResponse<T> = await this.client.post(url, data, config);
+      return {
+        data: response.data,
+        status: response.status
+      };
+    } catch (error) {
+      throw error;
     }
-    return this.api.delete<T>(url, config)
+  }
+
+  async put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+    try {
+      const response: AxiosResponse<T> = await this.client.put(url, data, config);
+      return {
+        data: response.data,
+        status: response.status
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async patch<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+    try {
+      const response: AxiosResponse<T> = await this.client.patch(url, data, config);
+      return {
+        data: response.data,
+        status: response.status
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+    try {
+      const response: AxiosResponse<T> = await this.client.delete(url, config);
+      return {
+        data: response.data,
+        status: response.status
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  // Utility methods
+  // EN: Utility methods for API client
+  // PT: Métodos utilitários para o cliente API
+
+  setBaseURL(baseURL: string): void {
+    this.client.defaults.baseURL = baseURL;
+  }
+
+  setTimeout(timeout: number): void {
+    this.client.defaults.timeout = timeout;
+  }
+
+  setDefaultHeaders(headers: Record<string, string>): void {
+    Object.assign(this.client.defaults.headers, headers);
+  }
+
+  // Health check method
+  // EN: Health check method to verify API connectivity
+  // PT: Método de verificação de saúde para verificar conectividade da API
+  async healthCheck(serviceUrl: string): Promise<boolean> {
+    try {
+      const response = await this.client.get(`${serviceUrl}/health`, { timeout: 5000 });
+      return response.status === 200;
+    } catch (error) {
+      console.warn(`Health check failed for ${serviceUrl}:`, error);
+      return false;
+    }
   }
 }
 
-// Exporta uma instância única do ApiClient para ser usada em toda a aplicação
-// Exports a single instance of ApiClient to be used throughout the application
-export const apiClient = new ApiClient()
+// Export singleton instance
+export const apiClient = new ApiClient();
+export default apiClient;
 
