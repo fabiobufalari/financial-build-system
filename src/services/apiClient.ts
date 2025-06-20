@@ -109,9 +109,9 @@ class ApiClient {
   private formatError(error: AxiosError): ApiError {
     if (error.response) {
       return {
-        message: error.response.data?.message || error.message,
+        message: (error.response.data as any)?.message || error.message,
         status: error.response.status,
-        code: error.response.data?.code,
+        code: (error.response.data as any)?.code,
         details: error.response.data
       };
     } else if (error.request) {

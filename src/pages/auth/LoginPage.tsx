@@ -69,12 +69,12 @@ const LoginPage = () => {
       // Armazena os tokens e dados do usuário
       // Stores tokens and user data
       const userData = {
-        id: authResponse.userId,
-        username: authResponse.username,
-        firstName: authResponse.firstName,
-        lastName: authResponse.lastName,
-        email: authResponse.email,
-        roles: authResponse.roles
+        id: authResponse.user.id,
+        username: authResponse.user.username,
+        firstName: authResponse.user.firstName,
+        lastName: authResponse.user.lastName,
+        email: authResponse.user.email,
+        roles: authResponse.user.roles
       }
       
       const tokens = {

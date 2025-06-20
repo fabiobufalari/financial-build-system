@@ -17,7 +17,8 @@ import {
   FiMenu,
   FiX,
   FiShield,
-  FiMap
+  FiMap,
+  FiPackage
 } from 'react-icons/fi'
 
 interface LayoutProps {
@@ -26,7 +27,8 @@ interface LayoutProps {
 
 /**
  * Layout principal com menu lateral responsivo e navegação otimizada
- * Main layout with responsive sidebar and optimized navigation
+ * EN: Main layout with responsive sidebar and optimized navigation for all microservices
+ * PT: Layout principal com menu lateral responsivo e navegação otimizada para todos os microserviços
  */
 const Layout = ({ children }: LayoutProps) => {
   const { t } = useTranslation()
@@ -59,116 +61,116 @@ const Layout = ({ children }: LayoutProps) => {
 
   const menuItems = [
     {
-      name: t('menu.dashboard'),
+      name: 'Dashboard',
       path: '/dashboard',
       icon: FiHome,
       color: 'text-blue-500',
       bgColor: 'bg-blue-50',
-      description: t('menu.descriptions.dashboard')
+      description: 'Visão geral do sistema'
     },
     {
-      name: t('menu.authentication'),
+      name: 'Autenticação',
       path: '/auth',
       icon: FiShield,
       color: 'text-indigo-500',
       bgColor: 'bg-indigo-50',
-      description: t('menu.descriptions.authentication')
+      description: 'Gerenciamento de usuários e permissões'
     },
     {
-      name: t('menu.company'),
+      name: 'Empresa',
       path: '/company',
       icon: FiSettings,
       color: 'text-purple-500',
       bgColor: 'bg-purple-50',
-      description: t('menu.descriptions.company')
+      description: 'Informações da empresa'
     },
     {
-      name: t('menu.employees'),
-      path: '/employee-and-costs',
+      name: 'Funcionários & Custos',
+      path: '/employees',
       icon: FiUsers,
       color: 'text-pink-500',
       bgColor: 'bg-pink-50',
-      description: t('menu.descriptions.employees')
+      description: 'Gestão de funcionários e custos'
     },
     {
-      name: t('menu.suppliers'),
-      path: '/supplier-service',
+      name: 'Fornecedores',
+      path: '/suppliers',
       icon: FiTruck,
       color: 'text-teal-500',
       bgColor: 'bg-teal-50',
-      description: t('menu.descriptions.suppliers')
+      description: 'Gestão de fornecedores'
     },
     {
-      name: t('menu.cashFlow'),
+      name: 'Fluxo de Caixa',
       path: '/cash-flow',
       icon: FiDollarSign,
       color: 'text-green-500',
       bgColor: 'bg-green-50',
-      description: t('menu.descriptions.cashFlow')
+      description: 'Controle de fluxo de caixa'
     },
     {
-      name: t('menu.accountsPayable'),
+      name: 'Contas a Pagar',
       path: '/accounts-payable',
       icon: FiCreditCard,
       color: 'text-red-500',
       bgColor: 'bg-red-50',
-      description: t('menu.descriptions.accountsPayable')
+      description: 'Gestão de contas a pagar'
     },
     {
-      name: t('menu.accountsReceivable'),
+      name: 'Contas a Receber',
       path: '/accounts-receivable',
       icon: FiCreditCard,
       color: 'text-orange-500',
       bgColor: 'bg-orange-50',
-      description: t('menu.descriptions.accountsReceivable')
+      description: 'Gestão de contas a receber'
     },
     {
-      name: t('menu.materials'),
-      path: '/calculation-materials',
-      icon: FiSettings,
+      name: 'Materiais de Construção',
+      path: '/materials',
+      icon: FiPackage,
       color: 'text-yellow-500',
       bgColor: 'bg-yellow-50',
-      description: t('menu.descriptions.materials')
+      description: 'Cálculo de materiais'
     },
     {
-      name: t('menu.projectMap'),
-      path: '/project-map',
+      name: 'Mapa de Funcionários',
+      path: '/maps',
       icon: FiMap,
       color: 'text-blue-700',
       bgColor: 'bg-blue-50',
-      description: t('menu.descriptions.projectMap')
+      description: 'Localização de funcionários'
     },
     {
-      name: t('menu.reports'),
-      path: '/financial-reports',
+      name: 'Relatórios Financeiros',
+      path: '/reports',
       icon: FiBarChart,
       color: 'text-cyan-500',
       bgColor: 'bg-cyan-50',
-      description: t('menu.descriptions.reports')
+      description: 'Relatórios e análises'
     },
     {
-      name: t('menu.analytics'),
-      path: '/api/data-analytics',
+      name: 'Analytics de Dados',
+      path: '/analytics',
       icon: FiTrendingUp,
       color: 'text-blue-600',
       bgColor: 'bg-blue-50',
-      description: t('menu.descriptions.analytics')
+      description: 'Análise de dados avançada'
     },
     {
-      name: t('menu.advanced'),
-      path: '/api/financial-advanced',
+      name: 'Financeiro Avançado',
+      path: '/advanced',
       icon: FiBarChart,
       color: 'text-purple-600',
       bgColor: 'bg-purple-50',
-      description: t('menu.descriptions.advanced')
+      description: 'Funcionalidades financeiras avançadas'
     },
     {
-      name: t('menu.integrations'),
-      path: '/api/integrations',
+      name: 'Integrações',
+      path: '/integrations',
       icon: FiLink,
       color: 'text-green-600',
       bgColor: 'bg-green-50',
-      description: t('menu.descriptions.integrations')
+      description: 'Integrações com sistemas externos'
     }
   ]
 
@@ -182,7 +184,11 @@ const Layout = ({ children }: LayoutProps) => {
     navigate('/login')
   }
 
-  const isActive = (path: string) => location.pathname === path
+  const isActive = (path: string) => {
+    // Check for exact match or if current path starts with the menu path
+    return location.pathname === path || 
+           (path !== '/dashboard' && location.pathname.startsWith(path))
+  }
 
   const toggleSidebarCollapse = () => {
     const newState = !isSidebarCollapsed
@@ -210,11 +216,11 @@ const Layout = ({ children }: LayoutProps) => {
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold">⚡</span>
+              <span className="text-white font-bold">🏗️</span>
             </div>
             {!isSidebarCollapsed && (
               <span className="font-semibold text-gray-900 hidden sm:block">
-                Financial Solutions
+                Financial Recovery
               </span>
             )}
           </div>
@@ -240,12 +246,12 @@ const Layout = ({ children }: LayoutProps) => {
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                 <span className="text-blue-600 font-medium text-sm">
-                  {user?.firstName?.[0]}{user?.lastName?.[0]}
+                  {user?.firstName?.[0] || 'U'}{user?.lastName?.[0] || 'S'}
                 </span>
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 truncate">
-                  {user?.firstName} {user?.lastName}
+                  {user?.firstName || 'Demo'} {user?.lastName || 'User'}
                 </p>
                 <p className="text-xs text-gray-500 truncate">
                   {user?.roles?.[0] || 'User'}
@@ -305,7 +311,7 @@ const Layout = ({ children }: LayoutProps) => {
           >
             <FiLogOut className="w-5 h-5" />
             {!isSidebarCollapsed && (
-              <span className="text-sm font-medium">{t('menu.logout')}</span>
+              <span className="text-sm font-medium">Sair</span>
             )}
           </button>
         </div>
@@ -327,7 +333,7 @@ const Layout = ({ children }: LayoutProps) => {
               {/* Breadcrumb */}
               <div className="hidden sm:flex items-center gap-2 text-sm">
                 <span className="text-gray-500">
-                  {menuItems.find(item => isActive(item.path))?.name || t('menu.dashboard')}
+                  {menuItems.find(item => isActive(item.path))?.name || 'Dashboard'}
                 </span>
               </div>
             </div>
@@ -356,3 +362,4 @@ const Layout = ({ children }: LayoutProps) => {
 }
 
 export default Layout
+
