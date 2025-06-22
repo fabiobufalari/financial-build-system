@@ -1,70 +1,102 @@
-import { useState, useEffect } from 'react'
-import { useTranslation } from 'react-i18next'
-import { FiEye, FiEyeOff, FiLoader, FiCheck, FiX } from 'react-icons/fi'
-import { useAuthStore } from '../../stores/authStore'
-import { useNavigate } from 'react-router-dom'
-import { authService } from '../../services/authService'
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../../stores/authStore';
+import { authService } from '../../services/authService';
+import { apiClient } from '../../services/apiClient';
+import { SERVICE_ENDPOINTS } from '../../config/apiConfig';
+import './LoginPage.css';
 
-/**
- * Página de login com seleção de idiomas e design responsivo
- * Login page with language selection and responsive design
- */
+// EN: Enhanced login page with real API connectivity and better user feedback
+// PT: Página de login aprimorada com conectividade de API real e melhor feedback ao usuário
+
+interface ConnectionStatus {
+  isConnected: boolean;
+  responseTime?: number;
+  error?: string;
+  isChecking: boolean;
+}
+
 const LoginPage = () => {
-  const { t, i18n } = useTranslation()
-  const navigate = useNavigate()
-  const { login, isAuthenticated } = useAuthStore()
+  const navigate = useNavigate();
+  const { login: setAuthData } = useAuthStore();
   
   const [formData, setFormData] = useState({
     username: '',
     password: ''
-  })
-  const [showPassword, setShowPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState(false)
+  });
+  
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>({
+    isConnected: false,
+    isChecking: true
+  });
 
-  // Redireciona se já estiver autenticado
-  // Redirects if already authenticated
+  // Check API connectivity on component mount
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/dashboard')
+    checkApiConnectivity();
+  }, []);
+
+  const checkApiConnectivity = async () => {
+    setConnectionStatus(prev => ({ ...prev, isChecking: true }));
+    
+    try {
+      const result = await apiClient.testConnectivity(SERVICE_ENDPOINTS.auth);
+      setConnectionStatus({
+        isConnected: result.isConnected,
+        responseTime: result.responseTime,
+        error: result.error,
+        isChecking: false
+      });
+      
+      if (result.isConnected) {
+        console.log(`✅ API connected successfully (${result.responseTime}ms)`);
+      } else {
+        console.warn(`❌ API connection failed: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Connectivity check failed:', error);
+      setConnectionStatus({
+        isConnected: false,
+        error: 'Failed to check connectivity',
+        isChecking: false
+      });
     }
-  }, [isAuthenticated, navigate])
+  };
 
-  const handleLanguageChange = (language: string) => {
-    i18n.changeLanguage(language)
-    localStorage.setItem('preferred-language', language)
-  }
-
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
-    if (error) setError('') // Limpa erro ao digitar // Clears error when typing
-  }
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
+    // Clear error when user starts typing
+    if (error) {
+      setError(null);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    setIsLoading(true)
+    e.preventDefault();
+    
+    if (!formData.username || !formData.password) {
+      setError('Por favor, preencha todos os campos');
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
 
     try {
-      // Validação básica
-      // Basic validation
-      if (!formData.username.trim()) {
-        throw new Error(t('login.errors.usernameRequired'))
-      }
-      if (!formData.password.trim()) {
-        throw new Error(t('login.errors.passwordRequired'))
-      }
-
-      // Usa o authService para autenticação
-      // Uses authService for authentication
+      console.log('🔐 Attempting login for user:', formData.username);
+      
       const authResponse = await authService.login({
         username: formData.username,
         password: formData.password
-      })
-      
-      setSuccess(true)
-      await new Promise(resolve => setTimeout(resolve, 500))
+      });
+
+      console.log('✅ Login successful:', authResponse);
       
       // Armazena os tokens e dados do usuário
       // Stores tokens and user data
@@ -81,165 +113,191 @@ const LoginPage = () => {
         accessToken: authResponse.accessToken,
         refreshToken: authResponse.refreshToken
       }
-      
-      login(tokens, userData)
-      navigate('/dashboard')
-      
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('login.errors.generic'))
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
-  const languages = [
-    { code: 'en', name: 'English', flag: '🇺🇸' },
-    { code: 'pt', name: 'Português', flag: '🇧🇷' },
-    { code: 'fr', name: 'Français', flag: '🇫🇷' },
-    { code: 'hi', name: 'हिन्दी', flag: '🇮🇳' },
-    { code: 'zh', name: '中文', flag: '🇨🇳' }
-  ]
+      // Update auth store
+      setAuthData(tokens, userData);
+      
+      console.log('🎉 Authentication successful, redirecting to dashboard');
+      navigate('/dashboard');
+      
+    } catch (err: any) {
+      console.error('❌ Login failed:', err);
+      
+      let errorMessage = 'Erro ao fazer login';
+      
+      if (err.message) {
+        if (err.message.includes('Invalid credentials') || err.message.includes('user not found')) {
+          errorMessage = 'Usuário ou senha incorretos';
+        } else if (err.message.includes('Network error') || err.message.includes('ECONNREFUSED')) {
+          errorMessage = 'Erro de conexão com o servidor. Tentando modo offline...';
+        } else {
+          errorMessage = err.message;
+        }
+      }
+      
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getConnectionStatusDisplay = () => {
+    if (connectionStatus.isChecking) {
+      return (
+        <div className="connection-status checking">
+          <span className="status-icon">🔄</span>
+          <span>Verificando conexão...</span>
+        </div>
+      );
+    }
+    
+    if (connectionStatus.isConnected) {
+      return (
+        <div className="connection-status connected">
+          <span className="status-icon">🟢</span>
+          <span>API conectada ({connectionStatus.responseTime}ms)</span>
+        </div>
+      );
+    }
+    
+    return (
+      <div className="connection-status disconnected">
+        <span className="status-icon">🔴</span>
+        <span>API offline - Modo demo disponível</span>
+        <button 
+          type="button" 
+          className="retry-button"
+          onClick={checkApiConnectivity}
+          disabled={connectionStatus.isChecking}
+        >
+          🔄 Tentar novamente
+        </button>
+      </div>
+    );
+  };
+
+  const getDemoCredentials = () => {
+    return (
+      <div className="demo-credentials">
+        <h4>🧪 Credenciais Demo (quando API offline):</h4>
+        <div className="credentials-list">
+          <div className="credential-item">
+            <strong>Admin:</strong> admin / admin123
+          </div>
+          <div className="credential-item">
+            <strong>Manager:</strong> fabiobufalari / 12345678!
+          </div>
+          <div className="credential-item">
+            <strong>User:</strong> user / user123
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-blue-700 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Logo e Título */}
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-              <span className="text-white font-bold text-lg">⚡</span>
-            </div>
+    <div className="login-page">
+      <div className="login-container">
+        <div className="login-header">
+          <div className="logo">
+            <span className="logo-icon">🏗️</span>
+            <h1>Financial Recovery</h1>
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">
-            Financial Solutions
-          </h1>
-          <p className="text-blue-200">
-            Financial Recovery System
-          </p>
+          <p className="subtitle">Sistema de Gestão Financeira</p>
         </div>
 
-        {/* Formulário de Login */}
-        <div className="bg-white/10 backdrop-blur-lg rounded-2xl shadow-2xl p-8 border border-white/20">
-          {/* Seleção de Idioma */}
-          <div className="mb-6">
-            <label className="block text-white text-sm font-medium mb-2">
-              {t('login.selectLanguage')}
-            </label>
-            <select
-              value={i18n.language}
-              onChange={(e) => handleLanguageChange(e.target.value)}
-              className="w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/50 backdrop-blur-sm"
-            >
-              {languages.map((lang) => (
-                <option key={lang.code} value={lang.code} className="bg-blue-800 text-white">
-                  {lang.flag} {lang.name}
-                </option>
-              ))}
-            </select>
+        {/* Connection Status */}
+        <div className="connection-section">
+          {getConnectionStatusDisplay()}
+        </div>
+
+        <form onSubmit={handleSubmit} className="login-form">
+          {error && (
+            <div className="error-message">
+              <span className="error-icon">⚠️</span>
+              {error}
+            </div>
+          )}
+
+          <div className="form-group">
+            <label htmlFor="username">Usuário</label>
+            <input
+              type="text"
+              id="username"
+              name="username"
+              value={formData.username}
+              onChange={handleInputChange}
+              placeholder="Digite seu usuário"
+              disabled={isLoading}
+              autoComplete="username"
+              required
+            />
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Campo Username */}
-            <div>
-              <label className="block text-white text-sm font-medium mb-2">
-                {t('login.username')}
-              </label>
-              <input
-                type="text"
-                value={formData.username}
-                onChange={(e) => handleInputChange('username', e.target.value)}
-                placeholder={t('login.usernamePlaceholder')}
-                className="w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/50 backdrop-blur-sm"
-                disabled={isLoading}
-              />
-            </div>
+          <div className="form-group">
+            <label htmlFor="password">Senha</label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              value={formData.password}
+              onChange={handleInputChange}
+              placeholder="Digite sua senha"
+              disabled={isLoading}
+              autoComplete="current-password"
+              required
+            />
+          </div>
 
-            {/* Campo Password */}
-            <div>
-              <label className="block text-white text-sm font-medium mb-2">
-                {t('login.password')}
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={formData.password}
-                  onChange={(e) => handleInputChange('password', e.target.value)}
-                  placeholder={t('login.passwordPlaceholder')}
-                  className="w-full px-4 py-3 pr-12 bg-white/20 border border-white/30 rounded-lg text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/50 backdrop-blur-sm"
-                  disabled={isLoading}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/70 hover:text-white transition-colors"
-                  disabled={isLoading}
-                >
-                  {showPassword ? <FiEyeOff className="w-5 h-5" /> : <FiEye className="w-5 h-5" />}
-                </button>
-              </div>
-            </div>
+          <button 
+            type="submit" 
+            className="login-button"
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <>
+                <span className="loading-spinner"></span>
+                Entrando...
+              </>
+            ) : (
+              'Entrar'
+            )}
+          </button>
+        </form>
 
-            {/* Mensagem de Erro */}
-            {error && (
-              <div className="flex items-center gap-2 p-3 bg-red-500/20 border border-red-500/30 rounded-lg text-red-200">
-                <FiX className="w-4 h-4 flex-shrink-0" />
-                <span className="text-sm">{error}</span>
+        {/* Demo credentials info */}
+        {!connectionStatus.isConnected && !connectionStatus.isChecking && (
+          <div className="demo-section">
+            {getDemoCredentials()}
+          </div>
+        )}
+
+        {/* API Status Info */}
+        <div className="api-info">
+          <h4>📡 Status da API:</h4>
+          <div className="api-details">
+            <div className="api-item">
+              <strong>Endpoint:</strong> {SERVICE_ENDPOINTS.auth}
+            </div>
+            <div className="api-item">
+              <strong>Modo:</strong> {connectionStatus.isConnected ? 'Produção' : 'Demo/Offline'}
+            </div>
+            {connectionStatus.error && (
+              <div className="api-item error">
+                <strong>Erro:</strong> {connectionStatus.error}
               </div>
             )}
-
-            {/* Mensagem de Sucesso */}
-            {success && (
-              <div className="flex items-center gap-2 p-3 bg-green-500/20 border border-green-500/30 rounded-lg text-green-200">
-                <FiCheck className="w-4 h-4 flex-shrink-0" />
-                <span className="text-sm">{t('login.success')}</span>
-              </div>
-            )}
-
-            {/* Botão de Login */}
-            <button
-              type="submit"
-              disabled={isLoading || !formData.username.trim() || !formData.password.trim()}
-              className="w-full py-3 px-4 bg-white text-blue-900 font-semibold rounded-lg hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-white/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2"
-            >
-              {isLoading ? (
-                <>
-                  <FiLoader className="w-4 h-4 animate-spin" />
-                  {t('login.signingIn')}
-                </>
-              ) : success ? (
-                <>
-                  <FiCheck className="w-4 h-4" />
-                  {t('login.success')}
-                </>
-              ) : (
-                t('login.signIn')
-              )}
-            </button>
-          </form>
-
-          {/* Informações de Demonstração */}
-          <div className="mt-6 p-4 bg-white/10 rounded-lg border border-white/20">
-            <p className="text-white/80 text-sm text-center mb-2">
-              {t('login.demo.title')}
-            </p>
-            <div className="text-xs text-white/60 space-y-1">
-              <div><strong>Admin:</strong> fabiobufalari / 12345678!</div>
-              <div><strong>Admin:</strong> admin / admin123</div>
-              <div><strong>User:</strong> user / user123</div>
-            </div>
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="text-center mt-8">
-          <p className="text-blue-200 text-sm">
-            © 2025 Fabio Bufalari. {t('login.footer')} <a href="mailto:bufalari.fabio@gmail.com" className="hover:underline">bufalari.fabio@gmail.com</a>
-          </p>
+        <div className="login-footer">
+          <p>© 2024 Financial Recovery System</p>
+          <p>Desenvolvido para gestão financeira empresarial</p>
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default LoginPage
+export default LoginPage;
 

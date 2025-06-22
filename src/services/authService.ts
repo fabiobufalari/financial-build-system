@@ -65,75 +65,124 @@ class AuthService {
 
   /**
    * Login user with credentials
-   * EN: Authenticates user with provided credentials
-   * PT: Autentica usuário com credenciais fornecidas
+   * EN: Authenticates user with provided credentials - tries real API first
+   * PT: Autentica usuário com credenciais fornecidas - tenta API real primeiro
    */
   async login(credentials: LoginRequest): Promise<AuthResponse> {
+    // Always try real API first, regardless of DEMO_MODE
     try {
-      if (DEMO_MODE) {
+      console.log('Attempting login with real API:', this.baseUrl);
+      const response = await apiClient.post(`${this.baseUrl}/login`, credentials);
+      console.log('Real API login successful:', response.data);
+      
+      // Store tokens for real API
+      if (response.data.accessToken) {
+        localStorage.setItem('accessToken', response.data.accessToken);
+      }
+      if (response.data.refreshToken) {
+        localStorage.setItem('refreshToken', response.data.refreshToken);
+      }
+      if (response.data.user) {
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+      }
+      
+      return response.data;
+    } catch (error: any) {
+      console.warn('Real API login failed, error details:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+        url: `${this.baseUrl}/login`
+      });
+      
+      // Only fall back to demo if explicitly enabled or if it's a connection error
+      if (DEMO_MODE || error.code === 'ECONNREFUSED' || error.code === 'NETWORK_ERROR') {
+        console.log('Falling back to demo mode');
         return this.demoLogin(credentials);
       }
-
-      const response = await apiClient.post(`${this.baseUrl}/login`, credentials);
-      return response.data;
-    } catch (error) {
-      console.warn('Real API login failed, falling back to demo mode:', error);
-      return this.demoLogin(credentials);
+      
+      // Re-throw the error for real authentication failures
+      throw error;
     }
   }
 
   /**
    * Register new user
-   * EN: Registers a new user in the system
-   * PT: Registra um novo usuário no sistema
+   * EN: Registers a new user in the system - tries real API first
+   * PT: Registra um novo usuário no sistema - tenta API real primeiro
    */
   async register(userData: RegisterRequest): Promise<AuthResponse> {
     try {
-      if (DEMO_MODE) {
+      console.log('Attempting registration with real API:', this.baseUrl);
+      const response = await apiClient.post(`${this.baseUrl}/register`, userData);
+      console.log('Real API registration successful');
+      
+      // Store tokens for real API
+      if (response.data.accessToken) {
+        localStorage.setItem('accessToken', response.data.accessToken);
+      }
+      if (response.data.refreshToken) {
+        localStorage.setItem('refreshToken', response.data.refreshToken);
+      }
+      if (response.data.user) {
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+      }
+      
+      return response.data;
+    } catch (error: any) {
+      console.warn('Real API registration failed:', error);
+      
+      // Only fall back to demo if explicitly enabled or if it's a connection error
+      if (DEMO_MODE || error.code === 'ECONNREFUSED' || error.code === 'NETWORK_ERROR') {
+        console.log('Falling back to demo registration');
         return this.demoRegister(userData);
       }
-
-      const response = await apiClient.post(`${this.baseUrl}/register`, userData);
-      return response.data;
-    } catch (error) {
-      console.warn('Real API register failed, falling back to demo mode:', error);
-      return this.demoRegister(userData);
+      
+      throw error;
     }
   }
 
   /**
    * Refresh authentication token
-   * EN: Refreshes the authentication token
-   * PT: Renova o token de autenticação
+   * EN: Refreshes the authentication token - tries real API first
+   * PT: Renova o token de autenticação - tenta API real primeiro
    */
   async refreshToken(refreshToken: string): Promise<AuthResponse> {
     try {
-      if (DEMO_MODE) {
+      const response = await apiClient.post(`${this.baseUrl}/refresh`, { refreshToken });
+      
+      // Store new tokens
+      if (response.data.accessToken) {
+        localStorage.setItem('accessToken', response.data.accessToken);
+      }
+      if (response.data.refreshToken) {
+        localStorage.setItem('refreshToken', response.data.refreshToken);
+      }
+      
+      return response.data;
+    } catch (error: any) {
+      console.warn('Real API refresh failed:', error);
+      
+      if (DEMO_MODE || error.code === 'ECONNREFUSED' || error.code === 'NETWORK_ERROR') {
         return this.demoRefreshToken(refreshToken);
       }
-
-      const response = await apiClient.post(`${this.baseUrl}/refresh`, { refreshToken });
-      return response.data;
-    } catch (error) {
-      console.warn('Real API refresh failed, falling back to demo mode:', error);
-      return this.demoRefreshToken(refreshToken);
+      
+      throw error;
     }
   }
 
   /**
    * Logout user
-   * EN: Logs out the current user
-   * PT: Desconecta o usuário atual
+   * EN: Logs out the current user - tries real API first
+   * PT: Desconecta o usuário atual - tenta API real primeiro
    */
   async logout(): Promise<void> {
     try {
-      if (!DEMO_MODE) {
-        const token = localStorage.getItem('accessToken');
-        if (token) {
-          await apiClient.post(`${this.baseUrl}/logout`, {}, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-        }
+      const token = localStorage.getItem('accessToken');
+      if (token && !DEMO_MODE) {
+        await apiClient.post(`${this.baseUrl}/logout`, {}, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
       }
     } catch (error) {
       console.warn('Logout API call failed:', error);
@@ -147,23 +196,29 @@ class AuthService {
 
   /**
    * Get current user info
-   * EN: Retrieves current user information
-   * PT: Recupera informações do usuário atual
+   * EN: Retrieves current user information - tries real API first
+   * PT: Recupera informações do usuário atual - tenta API real primeiro
    */
   async getCurrentUser(): Promise<User | null> {
     try {
       const token = localStorage.getItem('accessToken');
       if (!token) return null;
 
-      if (DEMO_MODE) {
-        const userStr = localStorage.getItem('user');
-        return userStr ? JSON.parse(userStr) : null;
+      // Try real API first
+      if (!DEMO_MODE) {
+        try {
+          const response = await apiClient.get(`${this.baseUrl}/me`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          return response.data;
+        } catch (error) {
+          console.warn('Real API getCurrentUser failed, falling back to local storage:', error);
+        }
       }
 
-      const response = await apiClient.get(`${this.baseUrl}/me`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      return response.data;
+      // Fallback to local storage
+      const userStr = localStorage.getItem('user');
+      return userStr ? JSON.parse(userStr) : null;
     } catch (error) {
       console.warn('Get current user failed:', error);
       return null;
@@ -185,13 +240,30 @@ class AuthService {
       const currentTime = Date.now() / 1000;
       return payload.exp > currentTime;
     } catch {
+      // If token parsing fails, check if we have user data (for demo mode)
+      const user = localStorage.getItem('user');
+      return !!user;
+    }
+  }
+
+  /**
+   * Check API health
+   * EN: Checks if the authentication API is available
+   * PT: Verifica se a API de autenticação está disponível
+   */
+  async checkApiHealth(): Promise<boolean> {
+    try {
+      const response = await apiClient.get(`${this.baseUrl}/health`, { timeout: 5000 });
+      return response.status === 200;
+    } catch (error) {
+      console.warn('API health check failed:', error);
       return false;
     }
   }
 
-  // Demo mode methods
-  // EN: Demo mode methods for testing
-  // PT: Métodos do modo demo para teste
+  // Demo mode methods (fallback only)
+  // EN: Demo mode methods for testing when API is unavailable
+  // PT: Métodos do modo demo para teste quando API não está disponível
 
   private async demoLogin(credentials: LoginRequest): Promise<AuthResponse> {
     await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
@@ -201,7 +273,7 @@ class AuthService {
     );
 
     if (!demoUser) {
-      throw new Error('Invalid credentials');
+      throw new Error('Invalid credentials - user not found in demo database');
     }
 
     const user = generateDemoUser(demoUser);
