@@ -18,6 +18,23 @@ export interface RegisterRequest {
   roles?: string[];
 }
 
+// Real API response structure (based on actual API testing)
+// EN: Real API response structure from buildingteste.ddns.net:8081
+// PT: Estrutura real da resposta da API de buildingteste.ddns.net:8081
+export interface RealApiAuthResponse {
+  accessToken: string;
+  refreshToken: string;
+  userId: string;
+  username: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  roles: string[];
+}
+
+// Normalized response structure for frontend
+// EN: Normalized response structure for consistent frontend usage
+// PT: Estrutura de resposta normalizada para uso consistente no frontend
 export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
@@ -64,6 +81,35 @@ class AuthService {
   private baseUrl = SERVICE_ENDPOINTS.auth;
 
   /**
+   * Normalize real API response to frontend expected structure
+   * EN: Converts real API response to normalized structure
+   * PT: Converte resposta real da API para estrutura normalizada
+   */
+  private normalizeApiResponse(realResponse: RealApiAuthResponse): AuthResponse {
+    // Map roles to permissions (basic mapping)
+    const permissions = realResponse.roles.includes('ROLE_ADMIN') 
+      ? ['CREATE', 'READ', 'UPDATE', 'DELETE']
+      : realResponse.roles.includes('ROLE_MANAGER')
+      ? ['CREATE', 'READ', 'UPDATE']
+      : ['READ'];
+
+    return {
+      accessToken: realResponse.accessToken,
+      refreshToken: realResponse.refreshToken,
+      user: {
+        id: realResponse.userId,
+        username: realResponse.username,
+        email: realResponse.email,
+        firstName: realResponse.firstName,
+        lastName: realResponse.lastName,
+        roles: realResponse.roles,
+        permissions: permissions
+      },
+      expiresIn: 3600 // Default to 1 hour, could be extracted from JWT
+    };
+  }
+
+  /**
    * Login user with credentials
    * EN: Authenticates user with provided credentials - tries real API first
    * PT: Autentica usuário com credenciais fornecidas - tenta API real primeiro
@@ -71,24 +117,28 @@ class AuthService {
   async login(credentials: LoginRequest): Promise<AuthResponse> {
     // Always try real API first, regardless of DEMO_MODE
     try {
-      console.log('Attempting login with real API:', this.baseUrl);
-      const response = await apiClient.post(`${this.baseUrl}/login`, credentials);
-      console.log('Real API login successful:', response.data);
+      console.log('🔐 Attempting login with real API:', this.baseUrl);
+      const response = await apiClient.post<RealApiAuthResponse>(`${this.baseUrl}/login`, credentials);
+      console.log('✅ Real API login successful:', response.data);
+      
+      // Normalize the response to expected structure
+      const normalizedResponse = this.normalizeApiResponse(response.data);
       
       // Store tokens for real API
-      if (response.data.accessToken) {
-        localStorage.setItem('accessToken', response.data.accessToken);
+      if (normalizedResponse.accessToken) {
+        localStorage.setItem('accessToken', normalizedResponse.accessToken);
       }
-      if (response.data.refreshToken) {
-        localStorage.setItem('refreshToken', response.data.refreshToken);
+      if (normalizedResponse.refreshToken) {
+        localStorage.setItem('refreshToken', normalizedResponse.refreshToken);
       }
-      if (response.data.user) {
-        localStorage.setItem('user', JSON.stringify(response.data.user));
+      if (normalizedResponse.user) {
+        localStorage.setItem('user', JSON.stringify(normalizedResponse.user));
       }
       
-      return response.data;
+      console.log('🎉 Login normalized and stored successfully');
+      return normalizedResponse;
     } catch (error: any) {
-      console.warn('Real API login failed, error details:', {
+      console.warn('❌ Real API login failed, error details:', {
         message: error.message,
         status: error.response?.status,
         data: error.response?.data,
@@ -97,7 +147,7 @@ class AuthService {
       
       // Only fall back to demo if explicitly enabled or if it's a connection error
       if (DEMO_MODE || error.code === 'ECONNREFUSED' || error.code === 'NETWORK_ERROR') {
-        console.log('Falling back to demo mode');
+        console.log('🔄 Falling back to demo mode');
         return this.demoLogin(credentials);
       }
       
@@ -113,28 +163,31 @@ class AuthService {
    */
   async register(userData: RegisterRequest): Promise<AuthResponse> {
     try {
-      console.log('Attempting registration with real API:', this.baseUrl);
-      const response = await apiClient.post(`${this.baseUrl}/register`, userData);
-      console.log('Real API registration successful');
+      console.log('📝 Attempting registration with real API:', this.baseUrl);
+      const response = await apiClient.post<RealApiAuthResponse>(`${this.baseUrl}/register`, userData);
+      console.log('✅ Real API registration successful');
+      
+      // Normalize the response
+      const normalizedResponse = this.normalizeApiResponse(response.data);
       
       // Store tokens for real API
-      if (response.data.accessToken) {
-        localStorage.setItem('accessToken', response.data.accessToken);
+      if (normalizedResponse.accessToken) {
+        localStorage.setItem('accessToken', normalizedResponse.accessToken);
       }
-      if (response.data.refreshToken) {
-        localStorage.setItem('refreshToken', response.data.refreshToken);
+      if (normalizedResponse.refreshToken) {
+        localStorage.setItem('refreshToken', normalizedResponse.refreshToken);
       }
-      if (response.data.user) {
-        localStorage.setItem('user', JSON.stringify(response.data.user));
+      if (normalizedResponse.user) {
+        localStorage.setItem('user', JSON.stringify(normalizedResponse.user));
       }
       
-      return response.data;
+      return normalizedResponse;
     } catch (error: any) {
-      console.warn('Real API registration failed:', error);
+      console.warn('❌ Real API registration failed:', error);
       
       // Only fall back to demo if explicitly enabled or if it's a connection error
       if (DEMO_MODE || error.code === 'ECONNREFUSED' || error.code === 'NETWORK_ERROR') {
-        console.log('Falling back to demo registration');
+        console.log('🔄 Falling back to demo registration');
         return this.demoRegister(userData);
       }
       
@@ -149,19 +202,22 @@ class AuthService {
    */
   async refreshToken(refreshToken: string): Promise<AuthResponse> {
     try {
-      const response = await apiClient.post(`${this.baseUrl}/refresh`, { refreshToken });
+      const response = await apiClient.post<RealApiAuthResponse>(`${this.baseUrl}/refresh`, { refreshToken });
+      
+      // Normalize the response
+      const normalizedResponse = this.normalizeApiResponse(response.data);
       
       // Store new tokens
-      if (response.data.accessToken) {
-        localStorage.setItem('accessToken', response.data.accessToken);
+      if (normalizedResponse.accessToken) {
+        localStorage.setItem('accessToken', normalizedResponse.accessToken);
       }
-      if (response.data.refreshToken) {
-        localStorage.setItem('refreshToken', response.data.refreshToken);
+      if (normalizedResponse.refreshToken) {
+        localStorage.setItem('refreshToken', normalizedResponse.refreshToken);
       }
       
-      return response.data;
+      return normalizedResponse;
     } catch (error: any) {
-      console.warn('Real API refresh failed:', error);
+      console.warn('❌ Real API refresh failed:', error);
       
       if (DEMO_MODE || error.code === 'ECONNREFUSED' || error.code === 'NETWORK_ERROR') {
         return this.demoRefreshToken(refreshToken);
@@ -185,7 +241,7 @@ class AuthService {
         });
       }
     } catch (error) {
-      console.warn('Logout API call failed:', error);
+      console.warn('⚠️ Logout API call failed:', error);
     } finally {
       // Always clear local storage
       localStorage.removeItem('accessToken');
@@ -207,12 +263,19 @@ class AuthService {
       // Try real API first
       if (!DEMO_MODE) {
         try {
-          const response = await apiClient.get(`${this.baseUrl}/me`, {
+          const response = await apiClient.get<RealApiAuthResponse>(`${this.baseUrl}/me`, {
             headers: { Authorization: `Bearer ${token}` }
           });
-          return response.data;
+          
+          // Convert to User format
+          const normalizedResponse = this.normalizeApiResponse(response.data);
+          return {
+            ...normalizedResponse.user,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          };
         } catch (error) {
-          console.warn('Real API getCurrentUser failed, falling back to local storage:', error);
+          console.warn('⚠️ Real API getCurrentUser failed, falling back to local storage:', error);
         }
       }
 
@@ -220,7 +283,7 @@ class AuthService {
       const userStr = localStorage.getItem('user');
       return userStr ? JSON.parse(userStr) : null;
     } catch (error) {
-      console.warn('Get current user failed:', error);
+      console.warn('❌ Get current user failed:', error);
       return null;
     }
   }
@@ -256,7 +319,7 @@ class AuthService {
       const response = await apiClient.get(`${this.baseUrl}/health`, { timeout: 5000 });
       return response.status === 200;
     } catch (error) {
-      console.warn('API health check failed:', error);
+      console.warn('⚠️ API health check failed:', error);
       return false;
     }
   }
@@ -283,14 +346,22 @@ class AuthService {
     const authResponse: AuthResponse = {
       accessToken,
       refreshToken,
-      user,
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        roles: user.roles,
+        permissions: user.permissions
+      },
       expiresIn: 3600
     };
 
     // Store in localStorage for demo
     localStorage.setItem('accessToken', accessToken);
     localStorage.setItem('refreshToken', refreshToken);
-    localStorage.setItem('user', JSON.stringify(user));
+    localStorage.setItem('user', JSON.stringify(authResponse.user));
 
     return authResponse;
   }
@@ -316,14 +387,22 @@ class AuthService {
     const authResponse: AuthResponse = {
       accessToken,
       refreshToken,
-      user,
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        roles: user.roles,
+        permissions: user.permissions
+      },
       expiresIn: 3600
     };
 
     // Store in localStorage for demo
     localStorage.setItem('accessToken', accessToken);
     localStorage.setItem('refreshToken', refreshToken);
-    localStorage.setItem('user', JSON.stringify(user));
+    localStorage.setItem('user', JSON.stringify(authResponse.user));
 
     return authResponse;
   }
