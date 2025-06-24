@@ -189,7 +189,8 @@ const resources = {
       // Footer
       footer: {
         copyright: '© 2024 Financial Recovery System',
-        developedFor: 'Developed for business financial management'
+        developedFor: 'Bufalari\'s Developed for business financial management',
+        contactEmail: 'bufalari.fabio@gmail.com'
       }
     }
   },
@@ -376,7 +377,8 @@ const resources = {
       // Footer
       footer: {
         copyright: '© 2024 Financial Recovery System',
-        developedFor: 'Desenvolvido para gestão financeira empresarial'
+        developedFor: "Bufalari's Desenvolvido para gestão financeira empresarial",
+        contactEmail: 'bufalari.fabio@gmail.com'
       }
     }
   },
@@ -561,11 +563,12 @@ const resources = {
       },
       
       // Footer
-      footer: {
-        copyright: '© 2024 Financial Recovery System',
-        developedFor: '为企业财务管理而开发'
-      }
-    }
+       footer: {
+         copyright: '© 2024 财务恢复系统',
+         developedFor: 'Bufalari 为企业财务管理开发',
+         contactEmail: 'bufalari.fabio@gmail.com'
+       }
+        }
   }
 };
 
