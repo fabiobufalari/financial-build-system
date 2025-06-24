@@ -1,365 +1,320 @@
-import { useState, useEffect } from 'react'
-import { useTranslation } from 'react-i18next'
-import { useNavigate, useLocation } from 'react-router-dom'
-import { useAuthStore } from '../stores/authStore'
+import { useState, useEffect } from 'react';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   FiHome,
   FiUsers,
   FiSettings,
   FiDollarSign,
-  FiTruck,
-  FiCreditCard,
+  FiTrendingUp,
   FiFileText,
   FiBarChart,
-  FiTrendingUp,
+  FiMap,
+  FiPackage,
+  FiTruck,
+  FiCreditCard,
+  FiPieChart,
   FiLink,
   FiLogOut,
-  FiMenu,
-  FiX,
-  FiShield,
-  FiMap,
-  FiPackage
-} from 'react-icons/fi'
+  FiShield
+} from 'react-icons/fi';
+import { useAuthStore } from '../stores/authStore';
+import './Layout.css';
 
-interface LayoutProps {
-  children: React.ReactNode
+interface MenuItem {
+  id: string;
+  title: string;
+  icon: any;
+  path: string;
+  badge?: number;
 }
 
-/**
- * Layout principal com menu lateral responsivo e navegação otimizada
- * EN: Main layout with responsive sidebar and optimized navigation for all microservices
- * PT: Layout principal com menu lateral responsivo e navegação otimizada para todos os microserviços
- */
-const Layout = ({ children }: LayoutProps) => {
-  const { t } = useTranslation()
-  const navigate = useNavigate()
-  const location = useLocation()
-  const { user, logout } = useAuthStore()
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+const Layout = () => {
+  const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { user, logout } = useAuthStore();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
-  // Verificar preferência do usuário para o menu lateral
-  // Check user preference for sidebar
-  useEffect(() => {
-    const savedPreference = localStorage.getItem('sidebarCollapsed')
-    if (savedPreference !== null) {
-      setIsSidebarCollapsed(savedPreference === 'true')
-    }
-    
-    // Escutar eventos de toggle do sidebar de outros componentes
-    // Listen for sidebar toggle events from other components
-    const handleToggleSidebar = (event: CustomEvent) => {
-      setIsSidebarCollapsed(event.detail.collapsed)
-    }
-    
-    window.addEventListener('toggleSidebar', handleToggleSidebar as EventListener)
-    
-    return () => {
-      window.removeEventListener('toggleSidebar', handleToggleSidebar as EventListener)
-    }
-  }, [])
-
-  const menuItems = [
+  // Menu items with translations
+  const menuItems: MenuItem[] = [
     {
-      name: 'Dashboard',
-      path: '/dashboard',
+      id: 'dashboard',
+      title: t('nav.dashboard'),
       icon: FiHome,
-      color: 'text-blue-500',
-      bgColor: 'bg-blue-50',
-      description: 'Visão geral do sistema'
+      path: '/dashboard'
     },
     {
-      name: 'Autenticação',
-      path: '/auth',
+      id: 'authentication',
+      title: t('nav.authentication'),
       icon: FiShield,
-      color: 'text-indigo-500',
-      bgColor: 'bg-indigo-50',
-      description: 'Gerenciamento de usuários e permissões'
+      path: '/authentication',
+      badge: 3
     },
     {
-      name: 'Empresa',
-      path: '/company',
+      id: 'company',
+      title: t('nav.company'),
       icon: FiSettings,
-      color: 'text-purple-500',
-      bgColor: 'bg-purple-50',
-      description: 'Informações da empresa'
+      path: '/company',
+      badge: 4
     },
     {
-      name: 'Funcionários & Custos',
-      path: '/employees',
+      id: 'employees',
+      title: t('nav.employees'),
       icon: FiUsers,
-      color: 'text-pink-500',
-      bgColor: 'bg-pink-50',
-      description: 'Gestão de funcionários e custos'
+      path: '/employees',
+      badge: 5
     },
     {
-      name: 'Fornecedores',
-      path: '/suppliers',
+      id: 'suppliers',
+      title: t('nav.suppliers'),
       icon: FiTruck,
-      color: 'text-teal-500',
-      bgColor: 'bg-teal-50',
-      description: 'Gestão de fornecedores'
+      path: '/suppliers',
+      badge: 6
     },
     {
-      name: 'Fluxo de Caixa',
-      path: '/cash-flow',
-      icon: FiDollarSign,
-      color: 'text-green-500',
-      bgColor: 'bg-green-50',
-      description: 'Controle de fluxo de caixa'
-    },
-    {
-      name: 'Contas a Pagar',
-      path: '/accounts-payable',
-      icon: FiCreditCard,
-      color: 'text-red-500',
-      bgColor: 'bg-red-50',
-      description: 'Gestão de contas a pagar'
-    },
-    {
-      name: 'Contas a Receber',
-      path: '/accounts-receivable',
-      icon: FiCreditCard,
-      color: 'text-orange-500',
-      bgColor: 'bg-orange-50',
-      description: 'Gestão de contas a receber'
-    },
-    {
-      name: 'Materiais de Construção',
-      path: '/materials',
-      icon: FiPackage,
-      color: 'text-yellow-500',
-      bgColor: 'bg-yellow-50',
-      description: 'Cálculo de materiais'
-    },
-    {
-      name: 'Mapa de Funcionários',
-      path: '/maps',
-      icon: FiMap,
-      color: 'text-blue-700',
-      bgColor: 'bg-blue-50',
-      description: 'Localização de funcionários'
-    },
-    {
-      name: 'Relatórios Financeiros',
-      path: '/reports',
-      icon: FiBarChart,
-      color: 'text-cyan-500',
-      bgColor: 'bg-cyan-50',
-      description: 'Relatórios e análises'
-    },
-    {
-      name: 'Analytics de Dados',
-      path: '/analytics',
+      id: 'cash-flow',
+      title: t('nav.cashFlow'),
       icon: FiTrendingUp,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50',
-      description: 'Análise de dados avançada'
+      path: '/cash-flow',
+      badge: 7
     },
     {
-      name: 'Financeiro Avançado',
-      path: '/advanced',
+      id: 'accounts-payable',
+      title: t('nav.accountsPayable'),
+      icon: FiCreditCard,
+      path: '/accounts-payable',
+      badge: 8
+    },
+    {
+      id: 'accounts-receivable',
+      title: t('nav.accountsReceivable'),
+      icon: FiDollarSign,
+      path: '/accounts-receivable',
+      badge: 9
+    },
+    {
+      id: 'construction-materials',
+      title: t('nav.constructionMaterials'),
+      icon: FiPackage,
+      path: '/construction-materials',
+      badge: 10
+    },
+    {
+      id: 'employee-map',
+      title: t('nav.employeeMap'),
+      icon: FiMap,
+      path: '/employee-map',
+      badge: 11
+    },
+    {
+      id: 'financial-reports',
+      title: t('nav.financialReports'),
+      icon: FiFileText,
+      path: '/financial-reports',
+      badge: 12
+    },
+    {
+      id: 'data-analytics',
+      title: t('nav.dataAnalytics'),
       icon: FiBarChart,
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-50',
-      description: 'Funcionalidades financeiras avançadas'
+      path: '/data-analytics',
+      badge: 13
     },
     {
-      name: 'Integrações',
-      path: '/integrations',
+      id: 'advanced-financial',
+      title: t('nav.advancedFinancial'),
+      icon: FiPieChart,
+      path: '/advanced-financial',
+      badge: 14
+    },
+    {
+      id: 'integrations',
+      title: t('nav.integrations'),
       icon: FiLink,
-      color: 'text-green-600',
-      bgColor: 'bg-green-50',
-      description: 'Integrações com sistemas externos'
+      path: '/integrations',
+      badge: 15
     }
-  ]
+  ];
 
-  const handleNavigation = (path: string) => {
-    navigate(path)
-    setIsSidebarOpen(false) // Fecha sidebar no mobile após navegação
-  }
+  // Language options
+  const languageOptions = [
+    { code: 'en', name: t('language.english'), flag: '🇺🇸' },
+    { code: 'pt', name: t('language.portuguese'), flag: '🇧🇷' },
+    { code: 'zh', name: t('language.chinese'), flag: '🇨🇳' }
+  ];
+
+  const handleMenuClick = (path: string) => {
+    navigate(path);
+  };
 
   const handleLogout = () => {
-    logout()
-    navigate('/login')
-  }
+    logout();
+    navigate('/login');
+  };
 
-  const isActive = (path: string) => {
-    // Check for exact match or if current path starts with the menu path
-    return location.pathname === path || 
-           (path !== '/dashboard' && location.pathname.startsWith(path))
-  }
+  const handleLanguageChange = (languageCode: string) => {
+    i18n.changeLanguage(languageCode);
+  };
 
-  const toggleSidebarCollapse = () => {
-    const newState = !isSidebarCollapsed
-    setIsSidebarCollapsed(newState)
-    localStorage.setItem('sidebarCollapsed', String(newState))
-  }
+  const isActiveRoute = (path: string) => {
+    return location.pathname === path;
+  };
+
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Overlay para mobile */}
-      {isSidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-          onClick={() => setIsSidebarOpen(false)}
-        />
-      )}
-
+    <div className="layout">
       {/* Sidebar */}
-      <div className={`
-        fixed lg:static inset-y-0 left-0 z-50 bg-white shadow-lg transform transition-all duration-300 ease-in-out
-        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-        ${isSidebarCollapsed ? 'w-16' : 'w-64'}
-      `}>
-        {/* Header do Sidebar */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold">🏗️</span>
-            </div>
-            {!isSidebarCollapsed && (
-              <span className="font-semibold text-gray-900 hidden sm:block">
-                Financial Recovery
-              </span>
+      <aside className={`sidebar ${isSidebarOpen ? 'open' : 'closed'}`}>
+        {/* Header */}
+        <div className="sidebar-header">
+          <div className="logo">
+            <span className="logo-icon">🏗️</span>
+            {isSidebarOpen && (
+              <div className="logo-text">
+                <h2>Financial Recovery</h2>
+                <p>{t('nav.systemOverview')}</p>
+              </div>
             )}
           </div>
-          <div className="flex items-center">
-            <button
-              onClick={toggleSidebarCollapse}
-              className="p-1 rounded-md hover:bg-gray-100 hidden lg:block"
-            >
-              {isSidebarCollapsed ? <FiMenu className="w-5 h-5" /> : <FiX className="w-5 h-5" />}
-            </button>
-            <button
-              onClick={() => setIsSidebarOpen(false)}
-              className="lg:hidden p-1 rounded-md hover:bg-gray-100"
-            >
-              <FiX className="w-5 h-5" />
-            </button>
-          </div>
+          <button 
+            className="sidebar-toggle"
+            onClick={toggleSidebar}
+            aria-label="Toggle sidebar"
+          >
+            ☰
+          </button>
         </div>
 
-        {/* Informações do Usuário */}
-        {!isSidebarCollapsed && (
-          <div className="p-4 border-b border-gray-200">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                <span className="text-blue-600 font-medium text-sm">
-                  {user?.firstName?.[0] || 'U'}{user?.lastName?.[0] || 'S'}
-                </span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">
-                  {user?.firstName || 'Demo'} {user?.lastName || 'User'}
-                </p>
-                <p className="text-xs text-gray-500 truncate">
-                  {user?.roles?.[0] || 'User'}
-                </p>
-              </div>
+        {/* User Info */}
+        {isSidebarOpen && user && (
+          <div className="user-info">
+            <div className="user-avatar">
+              {user.firstName?.charAt(0) || user.username?.charAt(0) || 'U'}
+            </div>
+            <div className="user-details">
+              <h3>{user.firstName} {user.lastName}</h3>
+              <p>{user.roles?.join(', ') || 'USER'}</p>
             </div>
           </div>
         )}
 
-        {/* Menu de Navegação */}
-        <nav className="flex-1 overflow-y-auto p-4">
-          <div className="space-y-1">
-            {menuItems.map((item) => {
-              const Icon = item.icon
-              const active = isActive(item.path)
-              
-              return (
+        {/* Navigation Menu */}
+        <nav className="sidebar-nav">
+          <ul className="nav-list">
+            {menuItems.map((item) => (
+              <li key={item.id} className="nav-item">
                 <button
-                  key={item.path}
-                  onClick={() => handleNavigation(item.path)}
-                  className={`
-                    w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all duration-200 group
-                    ${active 
-                      ? `${item.bgColor} ${item.color} shadow-sm border border-current border-opacity-20` 
-                      : 'text-gray-700 hover:bg-gray-100'
-                    }
-                  `}
-                  title={item.description}
+                  className={`nav-link ${isActiveRoute(item.path) ? 'active' : ''}`}
+                  onClick={() => handleMenuClick(item.path)}
+                  title={item.title}
                 >
-                  <Icon className={`w-5 h-5 flex-shrink-0 ${active ? item.color : 'text-gray-500'}`} />
-                  {!isSidebarCollapsed && (
-                    <div className="flex-1 min-w-0">
-                      <span className="text-sm font-medium truncate block">
-                        {item.name}
-                      </span>
-                      {active && (
-                        <span className="text-xs opacity-75 truncate block">
-                          {item.description}
-                        </span>
+                  <item.icon className="nav-icon" />
+                  {isSidebarOpen && (
+                    <>
+                      <span className="nav-text">{item.title}</span>
+                      {item.badge && (
+                        <span className="nav-badge">{item.badge}</span>
                       )}
-                    </div>
-                  )}
-                  {active && !isSidebarCollapsed && (
-                    <div className="w-2 h-2 bg-current rounded-full opacity-60" />
+                    </>
                   )}
                 </button>
-              )
-            })}
-          </div>
+              </li>
+            ))}
+          </ul>
         </nav>
 
-        {/* Botão de Logout */}
-        <div className="p-4 border-t border-gray-200">
+        {/* Language Selector */}
+        {isSidebarOpen && (
+          <div className="sidebar-language">
+            <label className="language-label">
+              🌐 {t('language.select')}
+            </label>
+            <select
+              value={i18n.language}
+              onChange={(e) => handleLanguageChange(e.target.value)}
+              className="language-dropdown"
+            >
+              {languageOptions.map((option) => (
+                <option key={option.code} value={option.code}>
+                  {option.flag} {option.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* Logout Button */}
+        <div className="sidebar-footer">
           <button
+            className="logout-button"
             onClick={handleLogout}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200 ${isSidebarCollapsed ? 'justify-center' : ''}`}
+            title={t('auth.logout')}
           >
-            <FiLogOut className="w-5 h-5" />
-            {!isSidebarCollapsed && (
-              <span className="text-sm font-medium">Sair</span>
-            )}
+            <FiLogOut className="logout-icon" />
+            {isSidebarOpen && <span>{t('auth.logout')}</span>}
           </button>
         </div>
-      </div>
+      </aside>
 
-      {/* Conteúdo Principal */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <header className="bg-white shadow-sm border-b border-gray-200 px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => setIsSidebarOpen(true)}
-                className="lg:hidden p-2 rounded-md hover:bg-gray-100"
-              >
-                <FiMenu className="w-5 h-5" />
-              </button>
-              
-              {/* Breadcrumb */}
-              <div className="hidden sm:flex items-center gap-2 text-sm">
-                <span className="text-gray-500">
-                  {menuItems.find(item => isActive(item.path))?.name || 'Dashboard'}
-                </span>
-              </div>
+      {/* Main Content */}
+      <main className={`main-content ${isSidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
+        {/* Top Bar */}
+        <header className="top-bar">
+          <div className="top-bar-left">
+            <button 
+              className="mobile-menu-toggle"
+              onClick={toggleSidebar}
+              aria-label="Toggle menu"
+            >
+              ☰
+            </button>
+            <h1 className="page-title">
+              {menuItems.find(item => item.path === location.pathname)?.title || t('nav.dashboard')}
+            </h1>
+          </div>
+          
+          <div className="top-bar-right">
+            {/* Current Date */}
+            <div className="current-date">
+              {new Date().toLocaleDateString(i18n.language === 'pt' ? 'pt-BR' : i18n.language === 'zh' ? 'zh-CN' : 'en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })}
             </div>
-
-            <div className="flex items-center gap-4">
-              <div className="text-right hidden sm:block">
-                <p className="text-sm text-gray-900">
-                  {new Date().toLocaleDateString('pt-BR', { 
-                    day: '2-digit', 
-                    month: '2-digit', 
-                    year: 'numeric' 
-                  })}
-                </p>
+            
+            {/* User Menu */}
+            <div className="user-menu">
+              <div className="user-avatar-small">
+                {user?.firstName?.charAt(0) || user?.username?.charAt(0) || 'U'}
               </div>
+              <span className="user-name">
+                {user?.firstName} {user?.lastName}
+              </span>
             </div>
           </div>
         </header>
 
-        {/* Área de Conteúdo */}
-        <main className="flex-1 overflow-auto">
-          {children}
-        </main>
-      </div>
+        {/* Page Content */}
+        <div className="page-content">
+          <Outlet />
+        </div>
+      </main>
+
+      {/* Mobile Overlay */}
+      {isSidebarOpen && (
+        <div 
+          className="mobile-overlay"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
     </div>
-  )
-}
+  );
+};
 
-export default Layout
-
+export default Layout;

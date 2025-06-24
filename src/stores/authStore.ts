@@ -2,24 +2,10 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
 /**
- * Interface que define o estado de autenticação
- * Interface that defines the authentication state
- */
-interface AuthState {
-  accessToken: string | null
-  refreshToken: string | null
-  user: User | null
-  isAuthenticated: boolean
-  login: (tokens: AuthTokens, user: User) => void
-  logout: () => void
-  updateTokens: (tokens: AuthTokens) => void
-}
-
-/**
  * Interface que define os tokens de autenticação
  * Interface that defines the authentication tokens
  */
-interface AuthTokens {
+export interface AuthTokens {
   accessToken: string
   refreshToken: string
 }
@@ -28,13 +14,29 @@ interface AuthTokens {
  * Interface que define o usuário autenticado
  * Interface that defines the authenticated user
  */
-interface User {
+export interface User {
   id: string
   username: string
   email: string
   firstName: string
   lastName: string
   roles: string[]
+  permissions?: string[]
+}
+
+/**
+ * Interface que define o estado de autenticação
+ * Interface that defines the authentication state
+ */
+interface AuthState {
+  accessToken: string | null
+  refreshToken: string | null
+  user: User | null
+  isAuthenticated: boolean
+  setAuthData: (tokens: AuthTokens, user: User) => void
+  login: (tokens: AuthTokens, user: User) => void
+  logout: () => void
+  updateTokens: (tokens: AuthTokens) => void
 }
 
 /**
@@ -48,6 +50,20 @@ export const useAuthStore = create<AuthState>()(
       refreshToken: null,
       user: null,
       isAuthenticated: false,
+      
+      /**
+       * Função para definir dados de autenticação (tokens e usuário)
+       * Function to set authentication data (tokens and user)
+       * 
+       * @param tokens - Tokens de autenticação (access e refresh)
+       * @param user - Dados do usuário autenticado
+       */
+      setAuthData: (tokens: AuthTokens, user: User) => set({
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        user,
+        isAuthenticated: true,
+      }),
       
       /**
        * Função para realizar login e armazenar tokens e dados do usuário
@@ -90,3 +106,4 @@ export const useAuthStore = create<AuthState>()(
     }
   )
 )
+

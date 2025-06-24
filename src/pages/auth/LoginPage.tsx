@@ -1,67 +1,77 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../../stores/authStore';
+import { useTranslation } from 'react-i18next';
 import { authService } from '../../services/authService';
-import { apiClient } from '../../services/apiClient';
-import { SERVICE_ENDPOINTS } from '../../config/apiConfig';
+import { useAuthStore } from '../../stores/authStore';
 import './LoginPage.css';
 
-// EN: Enhanced login page with real API connectivity and better user feedback
-// PT: Página de login aprimorada com conectividade de API real e melhor feedback ao usuário
+interface LoginFormData {
+  username: string;
+  password: string;
+}
 
-interface ConnectionStatus {
-  isConnected: boolean;
+interface ApiStatus {
+  connected: boolean;
+  endpoint: string;
+  mode: string;
   responseTime?: number;
-  error?: string;
-  isChecking: boolean;
 }
 
 const LoginPage = () => {
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-  const { login: setAuthData } = useAuthStore();
+  const { setAuthData } = useAuthStore();
   
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<LoginFormData>({
     username: '',
     password: ''
   });
   
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>({
-    isConnected: false,
-    isChecking: true
+  const [apiStatus, setApiStatus] = useState<ApiStatus>({
+    connected: false,
+    endpoint: 'http://buildingteste.ddns.net:8081/auth',
+    mode: 'production'
   });
 
-  // Check API connectivity on component mount
+  // Language options (removed Indian as requested)
+  const languageOptions = [
+    { code: 'en', name: t('language.english'), flag: '🇺🇸' },
+    { code: 'pt', name: t('language.portuguese'), flag: '🇧🇷' },
+    { code: 'zh', name: t('language.chinese'), flag: '🇨🇳' }
+  ];
+
+  // Check API status on component mount
   useEffect(() => {
-    checkApiConnectivity();
+    checkApiStatus();
   }, []);
 
-  const checkApiConnectivity = async () => {
-    setConnectionStatus(prev => ({ ...prev, isChecking: true }));
-    
+  const checkApiStatus = async () => {
     try {
-      const result = await apiClient.testConnectivity(SERVICE_ENDPOINTS.auth);
-      setConnectionStatus({
-        isConnected: result.isConnected,
-        responseTime: result.responseTime,
-        error: result.error,
-        isChecking: false
+      const startTime = new Date().getTime();
+      const response = await fetch(`${apiStatus.endpoint}/health`, {
+        method: 'GET'
       });
+      const endTime = new Date().getTime();
       
-      if (result.isConnected) {
-        console.log(`✅ API connected successfully (${result.responseTime}ms)`);
-      } else {
-        console.warn(`❌ API connection failed: ${result.error}`);
-      }
+      setApiStatus(prev => ({
+        ...prev,
+        connected: response.ok,
+        responseTime: endTime - startTime
+      }));
     } catch (error) {
-      console.error('Connectivity check failed:', error);
-      setConnectionStatus({
-        isConnected: false,
-        error: 'Failed to check connectivity',
-        isChecking: false
-      });
+      console.log('API health check failed:', error);
+      setApiStatus(prev => ({
+        ...prev,
+        connected: false,
+        responseTime: undefined
+      }));
     }
+  };
+
+  const handleLanguageChange = (languageCode: string) => {
+    i18n.changeLanguage(languageCode);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -81,7 +91,7 @@ const LoginPage = () => {
     e.preventDefault();
     
     if (!formData.username || !formData.password) {
-      setError('Por favor, preencha todos os campos');
+      setError(t('auth.invalidCredentials'));
       return;
     }
 
@@ -89,210 +99,165 @@ const LoginPage = () => {
     setError(null);
 
     try {
-      console.log('🔐 Attempting login for user:', formData.username);
-      
-      const authResponse = await authService.login({
+      console.log('🔐 Attempting login with:', {
         username: formData.username,
-        password: formData.password
+        endpoint: apiStatus.endpoint
       });
 
+      const authResponse = await authService.login({ username: formData.username, password: formData.password });
+      
       console.log('✅ Login successful:', authResponse);
-      
-      // Armazena os tokens e dados do usuário
-      // Stores tokens and user data
-      const userData = {
-        id: authResponse.user.id,
-        username: authResponse.user.username,
-        firstName: authResponse.user.firstName,
-        lastName: authResponse.user.lastName,
-        email: authResponse.user.email,
-        roles: authResponse.user.roles
-      }
-      
+
+      // Extract tokens and user data
       const tokens = {
         accessToken: authResponse.accessToken,
         refreshToken: authResponse.refreshToken
-      }
+      };
+
+      const userData = {
+        id: authResponse.user.id,
+        username: authResponse.user.username,
+        email: authResponse.user.email,
+        firstName: authResponse.user.firstName,
+        lastName: authResponse.user.lastName,
+        roles: authResponse.user.roles || ['ROLE_USER'],
+        permissions: authResponse.user.permissions || ['READ']
+      };
 
       // Update auth store
       setAuthData(tokens, userData);
-      
-      console.log('🎉 Authentication successful, redirecting to dashboard');
+
+      // Navigate to dashboard
       navigate('/dashboard');
       
-    } catch (err: any) {
-      console.error('❌ Login failed:', err);
-      
-      let errorMessage = 'Erro ao fazer login';
-      
-      if (err.message) {
-        if (err.message.includes('Invalid credentials') || err.message.includes('user not found')) {
-          errorMessage = 'Usuário ou senha incorretos';
-        } else if (err.message.includes('Network error') || err.message.includes('ECONNREFUSED')) {
-          errorMessage = 'Erro de conexão com o servidor. Tentando modo offline...';
-        } else {
-          errorMessage = err.message;
-        }
-      }
-      
-      setError(errorMessage);
+    } catch (error: any) {
+      console.error('❌ Login failed:', error);
+      setError(error.message || t('auth.invalidCredentials'));
     } finally {
       setIsLoading(false);
     }
   };
 
-  const getConnectionStatusDisplay = () => {
-    if (connectionStatus.isChecking) {
-      return (
-        <div className="connection-status checking">
-          <span className="status-icon">🔄</span>
-          <span>Verificando conexão...</span>
-        </div>
-      );
-    }
-    
-    if (connectionStatus.isConnected) {
-      return (
-        <div className="connection-status connected">
-          <span className="status-icon">🟢</span>
-          <span>API conectada ({connectionStatus.responseTime}ms)</span>
-        </div>
-      );
-    }
-    
-    return (
-      <div className="connection-status disconnected">
-        <span className="status-icon">🔴</span>
-        <span>API offline - Modo demo disponível</span>
-        <button 
-          type="button" 
-          className="retry-button"
-          onClick={checkApiConnectivity}
-          disabled={connectionStatus.isChecking}
-        >
-          🔄 Tentar novamente
-        </button>
-      </div>
-    );
-  };
-
-  const getDemoCredentials = () => {
-    return (
-      <div className="demo-credentials">
-        <h4>🧪 Credenciais Demo (quando API offline):</h4>
-        <div className="credentials-list">
-          <div className="credential-item">
-            <strong>Admin:</strong> admin / admin123
-          </div>
-          <div className="credential-item">
-            <strong>Manager:</strong> fabiobufalari / 12345678!
-          </div>
-          <div className="credential-item">
-            <strong>User:</strong> user / user123
-          </div>
-        </div>
-      </div>
-    );
+  const handleRetryConnection = () => {
+    checkApiStatus();
   };
 
   return (
-    <div className="login-page">
-      <div className="login-container">
+    <div className="login-container">
+      <div className="login-card">
+        {/* Header with Language Selector */}
         <div className="login-header">
-          <div className="logo">
-            <span className="logo-icon">🏗️</span>
+          <div className="logo-section">
+            <div className="logo">🏗️</div>
             <h1>Financial Recovery</h1>
+            <p className="subtitle">{t('dashboard.financialSystemOverview')}</p>
           </div>
-          <p className="subtitle">Sistema de Gestão Financeira</p>
+          
+          {/* Language Selector */}
+          <div className="language-selector">
+            <label htmlFor="language-select" className="language-label">
+              🌐 {t('language.select')}
+            </label>
+            <select
+              id="language-select"
+              value={i18n.language}
+              onChange={(e) => handleLanguageChange(e.target.value)}
+              className="language-dropdown"
+            >
+              {languageOptions.map((option) => (
+                <option key={option.code} value={option.code}>
+                  {option.flag} {option.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
-        {/* Connection Status */}
-        <div className="connection-section">
-          {getConnectionStatusDisplay()}
-        </div>
-
-        <form onSubmit={handleSubmit} className="login-form">
-          {error && (
-            <div className="error-message">
-              <span className="error-icon">⚠️</span>
-              {error}
-            </div>
+        {/* API Status */}
+        <div className={`api-status ${apiStatus.connected ? 'connected' : 'disconnected'}`}>
+          <span className="status-indicator">
+            {apiStatus.connected ? '🟢' : '🔴'}
+          </span>
+          <span className="status-text">
+            {apiStatus.connected ? t('api.connected') : t('api.disconnected')}
+            {apiStatus.responseTime && ` (${apiStatus.responseTime}ms)`}
+          </span>
+          {!apiStatus.connected && (
+            <button 
+              onClick={handleRetryConnection}
+              className="retry-button"
+              type="button"
+            >
+              🔄 {t('refresh')}
+            </button>
           )}
+        </div>
 
+        {/* Login Form */}
+        <form onSubmit={handleSubmit} className="login-form">
           <div className="form-group">
-            <label htmlFor="username">Usuário</label>
+            <label htmlFor="username">{t('auth.username')}</label>
             <input
               type="text"
               id="username"
               name="username"
               value={formData.username}
               onChange={handleInputChange}
-              placeholder="Digite seu usuário"
-              disabled={isLoading}
-              autoComplete="username"
+              placeholder={t('auth.enterUsername')}
               required
+              disabled={isLoading}
             />
           </div>
 
           <div className="form-group">
-            <label htmlFor="password">Senha</label>
+            <label htmlFor="password">{t('auth.password')}</label>
             <input
               type="password"
               id="password"
               name="password"
               value={formData.password}
               onChange={handleInputChange}
-              placeholder="Digite sua senha"
-              disabled={isLoading}
-              autoComplete="current-password"
+              placeholder={t('auth.enterPassword')}
               required
+              disabled={isLoading}
             />
           </div>
 
-          <button 
-            type="submit" 
+          {error && (
+            <div className="error-message">
+              ⚠️ {error}
+            </div>
+          )}
+
+          <button
+            type="submit"
             className="login-button"
-            disabled={isLoading}
+            disabled={isLoading || !formData.username || !formData.password}
           >
             {isLoading ? (
               <>
                 <span className="loading-spinner"></span>
-                Entrando...
+                {t('loading')}...
               </>
             ) : (
-              'Entrar'
+              t('auth.login')
             )}
           </button>
         </form>
 
-        {/* Demo credentials info */}
-        {!connectionStatus.isConnected && !connectionStatus.isChecking && (
-          <div className="demo-section">
-            {getDemoCredentials()}
-          </div>
-        )}
-
-        {/* API Status Info */}
+        {/* API Information */}
         <div className="api-info">
-          <h4>📡 Status da API:</h4>
+          <h3>📊 {t('api.status')}:</h3>
           <div className="api-details">
-            <div className="api-item">
-              <strong>Endpoint:</strong> {SERVICE_ENDPOINTS.auth}
-            </div>
-            <div className="api-item">
-              <strong>Modo:</strong> {connectionStatus.isConnected ? 'Produção' : 'Demo/Offline'}
-            </div>
-            {connectionStatus.error && (
-              <div className="api-item error">
-                <strong>Erro:</strong> {connectionStatus.error}
-              </div>
-            )}
+            <div><strong>{t('api.endpoint')}:</strong> {apiStatus.endpoint}</div>
+            <div><strong>{t('api.mode')}:</strong> {t('api.production')}</div>
           </div>
         </div>
 
+        {/* Footer */}
         <div className="login-footer">
-          <p>© 2024 Financial Recovery System</p>
-          <p>Desenvolvido para gestão financeira empresarial</p>
+          <p>{t('footer.copyright')}</p>
+          <p>{t('footer.developedFor')}</p>
         </div>
       </div>
     </div>
