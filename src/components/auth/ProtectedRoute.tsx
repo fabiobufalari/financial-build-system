@@ -11,16 +11,13 @@ interface ProtectedRouteProps {
  * Protected route component that requires authentication
  */
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const { isAuthenticated } = useAuthStore()
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated)
 
-  // Se não estiver autenticado, redireciona para login
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />
   }
 
-  // Se estiver autenticado, renderiza o conteúdo
   return <>{children}</>
 }
 
 export default ProtectedRoute
-
