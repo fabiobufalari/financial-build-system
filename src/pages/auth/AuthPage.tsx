@@ -1,24 +1,18 @@
-import { useTranslation } from 'react-i18next'
+import { useTranslation } from 'react-i18next';
 
 const AuthPage = () => {
-  const { t } = useTranslation()
+  const { t } = useTranslation();
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">
-          {t('menu.auth')}
-        </h1>
-      </div>
-
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <p className="text-gray-600">
-          Página em desenvolvimento. Funcionalidades serão implementadas em breve.
-        </p>
-      </div>
+    <div className="p-6">
+      <h1 className="text-2xl font-bold mb-4">{t('nav.authentication')}</h1>
+      <p className="text-gray-600">
+        {t('pages.auth.description')}
+      </p>
+      {/* Authentication management content will be implemented here */}
     </div>
-  )
-}
+  );
+};
 
-export default AuthPage
+export default AuthPage;
 

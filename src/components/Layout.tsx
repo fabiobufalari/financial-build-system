@@ -21,6 +21,10 @@ import {
 import { useAuthStore } from '../stores/authStore';
 import './Layout.css';
 
+interface LayoutProps {
+  // Layout now uses Outlet for nested routing
+}
+
 interface MenuItem {
   id: string;
   title: string;
