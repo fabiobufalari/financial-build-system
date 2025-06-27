@@ -1,333 +1,249 @@
 import { apiClient } from './apiClient';
-import { SERVICE_ENDPOINTS, DEMO_MODE } from '../config/apiConfig';
+import { SERVICE_ENDPOINTS } from '../config/apiConfig';
 
-// EN: Company service with full CRUD operations
-// PT: Serviço de empresa com operações CRUD completas
-
+// Company/Group interfaces
 export interface Company {
   id: string;
   name: string;
-  tradeName?: string;
-  taxId: string; // CNPJ/EIN
-  email: string;
-  phone: string;
-  website?: string;
-  address: {
+  description?: string;
+  type: 'CONSTRUCTION' | 'ENGINEERING' | 'CONSULTING' | 'OTHER';
+  status: 'ACTIVE' | 'INACTIVE';
+  address?: {
     street: string;
-    number: string;
-    complement?: string;
-    neighborhood: string;
     city: string;
     state: string;
     zipCode: string;
     country: string;
   };
-  industry: string;
-  size: 'SMALL' | 'MEDIUM' | 'LARGE' | 'ENTERPRISE';
-  status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
-  foundedDate?: string;
-  description?: string;
+  contactInfo?: {
+    phone: string;
+    email: string;
+    website?: string;
+  };
   createdAt: string;
   updatedAt: string;
 }
 
 export interface CreateCompanyRequest {
   name: string;
-  tradeName?: string;
-  taxId: string;
-  email: string;
-  phone: string;
-  website?: string;
-  address: {
+  description?: string;
+  type: 'CONSTRUCTION' | 'ENGINEERING' | 'CONSULTING' | 'OTHER';
+  address?: {
     street: string;
-    number: string;
-    complement?: string;
-    neighborhood: string;
     city: string;
     state: string;
     zipCode: string;
     country: string;
   };
-  industry: string;
-  size: 'SMALL' | 'MEDIUM' | 'LARGE' | 'ENTERPRISE';
-  foundedDate?: string;
-  description?: string;
+  contactInfo?: {
+    phone: string;
+    email: string;
+    website?: string;
+  };
 }
 
-// Demo data for testing
-// EN: Demo data for testing purposes
-// PT: Dados demo para fins de teste
-const generateDemoCompanies = (): Company[] => [
+export interface UpdateCompanyRequest extends Partial<CreateCompanyRequest> {
+  id: string;
+  status?: 'ACTIVE' | 'INACTIVE';
+}
+
+// Demo data for fallback
+const DEMO_COMPANIES: Company[] = [
   {
-    id: 'comp-001',
-    name: 'Construtora Bufalari Ltda',
-    tradeName: 'Bufalari Construções',
-    taxId: '12.345.678/0001-90',
-    email: 'contato@bufalari.com.br',
-    phone: '+55 11 99999-9999',
-    website: 'https://bufalari.com.br',
-    address: {
-      street: 'Rua das Construções',
-      number: '123',
-      complement: 'Sala 101',
-      neighborhood: 'Centro',
-      city: 'São Paulo',
-      state: 'SP',
-      zipCode: '01234-567',
-      country: 'Brasil'
-    },
-    industry: 'Construction',
-    size: 'MEDIUM',
+    id: '1',
+    name: 'Construction Solutions Inc.',
+    description: 'Leading construction company specializing in commercial buildings',
+    type: 'CONSTRUCTION',
     status: 'ACTIVE',
-    foundedDate: '2015-03-15',
-    description: 'Empresa especializada em construção civil e reformas',
-    createdAt: '2025-01-01T10:00:00Z',
-    updatedAt: '2025-06-15T14:30:00Z'
+    address: {
+      street: '123 Builder St',
+      city: 'Toronto',
+      state: 'ON',
+      zipCode: 'M5V 3A8',
+      country: 'Canada'
+    },
+    contactInfo: {
+      phone: '+1-416-555-0123',
+      email: 'info@constructionsolutions.ca',
+      website: 'https://constructionsolutions.ca'
+    },
+    createdAt: '2024-01-15T10:00:00Z',
+    updatedAt: '2024-01-15T10:00:00Z'
   },
   {
-    id: 'comp-002',
-    name: 'Engenharia XYZ S.A.',
-    tradeName: 'XYZ Engenharia',
-    taxId: '98.765.432/0001-10',
-    email: 'contato@xyzeng.com',
-    phone: '+55 11 88888-8888',
-    website: 'https://xyzengenharia.com',
-    address: {
-      street: 'Avenida Paulista',
-      number: '1000',
-      neighborhood: 'Bela Vista',
-      city: 'São Paulo',
-      state: 'SP',
-      zipCode: '01310-100',
-      country: 'Brasil'
-    },
-    industry: 'Engineering',
-    size: 'LARGE',
+    id: '2',
+    name: 'Engineering Excellence Ltd.',
+    description: 'Structural and civil engineering services',
+    type: 'ENGINEERING',
     status: 'ACTIVE',
-    foundedDate: '2010-08-20',
-    description: 'Consultoria em engenharia civil e estrutural',
-    createdAt: '2025-01-15T09:00:00Z',
-    updatedAt: '2025-06-10T16:45:00Z'
+    address: {
+      street: '456 Engineer Ave',
+      city: 'Vancouver',
+      state: 'BC',
+      zipCode: 'V6B 1A1',
+      country: 'Canada'
+    },
+    contactInfo: {
+      phone: '+1-604-555-0456',
+      email: 'contact@engexcellence.ca'
+    },
+    createdAt: '2024-02-01T14:30:00Z',
+    updatedAt: '2024-02-01T14:30:00Z'
   },
   {
-    id: 'comp-003',
-    name: 'Materiais de Construção ABC',
-    tradeName: 'ABC Materiais',
-    taxId: '11.222.333/0001-44',
-    email: 'vendas@abcmateriais.com',
-    phone: '+55 11 77777-7777',
-    address: {
-      street: 'Rua dos Materiais',
-      number: '456',
-      neighborhood: 'Industrial',
-      city: 'Guarulhos',
-      state: 'SP',
-      zipCode: '07000-000',
-      country: 'Brasil'
-    },
-    industry: 'Retail',
-    size: 'SMALL',
+    id: '3',
+    name: 'Project Consulting Group',
+    description: 'Construction project management and consulting',
+    type: 'CONSULTING',
     status: 'ACTIVE',
-    foundedDate: '2018-11-10',
-    description: 'Fornecimento de materiais de construção',
-    createdAt: '2025-02-01T11:30:00Z',
-    updatedAt: '2025-06-05T08:20:00Z'
+    address: {
+      street: '789 Consultant Blvd',
+      city: 'Calgary',
+      state: 'AB',
+      zipCode: 'T2P 1J9',
+      country: 'Canada'
+    },
+    contactInfo: {
+      phone: '+1-403-555-0789',
+      email: 'hello@projectconsulting.ca',
+      website: 'https://projectconsulting.ca'
+    },
+    createdAt: '2024-03-10T09:15:00Z',
+    updatedAt: '2024-03-10T09:15:00Z'
   }
 ];
 
 class CompanyService {
-  private baseUrl = SERVICE_ENDPOINTS.company;
-  private demoData = generateDemoCompanies();
+  private baseUrl: string;
+  private demoData: Company[];
+
+  constructor() {
+    this.baseUrl = SERVICE_ENDPOINTS.company;
+    this.demoData = [...DEMO_COMPANIES];
+  }
 
   /**
    * Get all companies
-   * EN: Retrieves all companies with optional filtering
-   * PT: Recupera todas as empresas com filtragem opcional
    */
-  async getAllCompanies(status?: string): Promise<Company[]> {
+  async getCompanies(): Promise<Company[]> {
     try {
-      if (DEMO_MODE) {
-        return this.demoGetAllCompanies(status);
-      }
-
-      const url = status ? `${this.baseUrl}?status=${status}` : this.baseUrl;
-      const response = await apiClient.get<Company[]>(url);
+      console.log('🏢 Fetching companies from API:', this.baseUrl);
+      const response = await apiClient.get<Company[]>(`${this.baseUrl}`);
+      console.log('✅ Companies fetched successfully:', response.data);
       return response.data;
-    } catch (error) {
-      console.warn('Real API failed, falling back to demo mode:', error);
-      return this.demoGetAllCompanies(status);
+    } catch (error: any) {
+      console.warn('❌ API call failed, using demo data:', error.message);
+      return this.demoData;
     }
   }
 
   /**
    * Get company by ID
-   * EN: Retrieves a specific company by its ID
-   * PT: Recupera uma empresa específica pelo seu ID
    */
-  async getCompanyById(id: string): Promise<Company> {
+  async getCompanyById(id: string): Promise<Company | null> {
     try {
-      if (DEMO_MODE) {
-        return this.demoGetCompanyById(id);
-      }
-
+      console.log('🏢 Fetching company by ID:', id);
       const response = await apiClient.get<Company>(`${this.baseUrl}/${id}`);
+      console.log('✅ Company fetched successfully:', response.data);
       return response.data;
-    } catch (error) {
-      console.warn('Real API failed, falling back to demo mode:', error);
-      return this.demoGetCompanyById(id);
+    } catch (error: any) {
+      console.warn('❌ API call failed, using demo data:', error.message);
+      const company = this.demoData.find(c => c.id === id);
+      return company || null;
     }
   }
 
   /**
    * Create new company
-   * EN: Creates a new company
-   * PT: Cria uma nova empresa
    */
   async createCompany(companyData: CreateCompanyRequest): Promise<Company> {
     try {
-      if (DEMO_MODE) {
-        return this.demoCreateCompany(companyData);
-      }
-
-      const response = await apiClient.post<Company>(this.baseUrl, companyData);
+      console.log('🏢 Creating company via API:', companyData);
+      const response = await apiClient.post<Company>(`${this.baseUrl}`, companyData);
+      console.log('✅ Company created successfully:', response.data);
       return response.data;
-    } catch (error) {
-      console.warn('Real API failed, falling back to demo mode:', error);
-      return this.demoCreateCompany(companyData);
+    } catch (error: any) {
+      console.warn('❌ API call failed, creating in demo data:', error.message);
+      
+      // Create in demo data
+      const newCompany: Company = {
+        id: Date.now().toString(),
+        ...companyData,
+        status: 'ACTIVE',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      this.demoData.push(newCompany);
+      console.log('✅ Company created in demo data:', newCompany);
+      return newCompany;
     }
   }
 
   /**
    * Update company
-   * EN: Updates an existing company
-   * PT: Atualiza uma empresa existente
    */
-  async updateCompany(id: string, companyData: Partial<CreateCompanyRequest>): Promise<Company> {
+  async updateCompany(companyData: UpdateCompanyRequest): Promise<Company> {
     try {
-      if (DEMO_MODE) {
-        return this.demoUpdateCompany(id, companyData);
-      }
-
-      const response = await apiClient.put<Company>(`${this.baseUrl}/${id}`, companyData);
+      console.log('🏢 Updating company via API:', companyData);
+      const response = await apiClient.put<Company>(`${this.baseUrl}/${companyData.id}`, companyData);
+      console.log('✅ Company updated successfully:', response.data);
       return response.data;
-    } catch (error) {
-      console.warn('Real API failed, falling back to demo mode:', error);
-      return this.demoUpdateCompany(id, companyData);
+    } catch (error: any) {
+      console.warn('❌ API call failed, updating in demo data:', error.message);
+      
+      // Update in demo data
+      const index = this.demoData.findIndex(c => c.id === companyData.id);
+      if (index !== -1) {
+        this.demoData[index] = {
+          ...this.demoData[index],
+          ...companyData,
+          updatedAt: new Date().toISOString()
+        };
+        console.log('✅ Company updated in demo data:', this.demoData[index]);
+        return this.demoData[index];
+      }
+      throw new Error('Company not found');
     }
   }
 
   /**
    * Delete company
-   * EN: Deletes a company
-   * PT: Exclui uma empresa
    */
-  async deleteCompany(id: string): Promise<void> {
+  async deleteCompany(id: string): Promise<boolean> {
     try {
-      if (DEMO_MODE) {
-        return this.demoDeleteCompany(id);
-      }
-
+      console.log('🏢 Deleting company via API:', id);
       await apiClient.delete(`${this.baseUrl}/${id}`);
-    } catch (error) {
-      console.warn('Real API failed, falling back to demo mode:', error);
-      return this.demoDeleteCompany(id);
+      console.log('✅ Company deleted successfully');
+      return true;
+    } catch (error: any) {
+      console.warn('❌ API call failed, deleting from demo data:', error.message);
+      
+      // Delete from demo data
+      const index = this.demoData.findIndex(c => c.id === id);
+      if (index !== -1) {
+        this.demoData.splice(index, 1);
+        console.log('✅ Company deleted from demo data');
+        return true;
+      }
+      return false;
     }
   }
 
   /**
-   * Search companies
-   * EN: Searches companies by name or tax ID
-   * PT: Busca empresas por nome ou CNPJ
+   * Get companies by type
    */
-  async searchCompanies(query: string): Promise<Company[]> {
-    try {
-      if (DEMO_MODE) {
-        return this.demoSearchCompanies(query);
-      }
-
-      const response = await apiClient.get<Company[]>(`${this.baseUrl}/search?q=${encodeURIComponent(query)}`);
-      return response.data;
-    } catch (error) {
-      console.warn('Real API failed, falling back to demo mode:', error);
-      return this.demoSearchCompanies(query);
-    }
+  async getCompaniesByType(type: Company['type']): Promise<Company[]> {
+    const companies = await this.getCompanies();
+    return companies.filter(company => company.type === type);
   }
 
-  // Demo mode methods
-  // EN: Demo mode methods for testing
-  // PT: Métodos do modo demo para teste
-
-  private async demoGetAllCompanies(status?: string): Promise<Company[]> {
-    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API delay
-    
-    if (status) {
-      return this.demoData.filter(company => company.status === status);
-    }
-    return [...this.demoData];
-  }
-
-  private async demoGetCompanyById(id: string): Promise<Company> {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    const company = this.demoData.find(c => c.id === id);
-    if (!company) {
-      throw new Error('Company not found');
-    }
-    return { ...company };
-  }
-
-  private async demoCreateCompany(companyData: CreateCompanyRequest): Promise<Company> {
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    const newCompany: Company = {
-      id: `comp-${Date.now()}`,
-      ...companyData,
-      status: 'ACTIVE',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    
-    this.demoData.push(newCompany);
-    return { ...newCompany };
-  }
-
-  private async demoUpdateCompany(id: string, companyData: Partial<CreateCompanyRequest>): Promise<Company> {
-    await new Promise(resolve => setTimeout(resolve, 600));
-    
-    const index = this.demoData.findIndex(c => c.id === id);
-    if (index === -1) {
-      throw new Error('Company not found');
-    }
-    
-    this.demoData[index] = {
-      ...this.demoData[index],
-      ...companyData,
-      updatedAt: new Date().toISOString()
-    };
-    
-    return { ...this.demoData[index] };
-  }
-
-  private async demoDeleteCompany(id: string): Promise<void> {
-    await new Promise(resolve => setTimeout(resolve, 400));
-    
-    const index = this.demoData.findIndex(c => c.id === id);
-    if (index === -1) {
-      throw new Error('Company not found');
-    }
-    
-    this.demoData.splice(index, 1);
-  }
-
-  private async demoSearchCompanies(query: string): Promise<Company[]> {
-    await new Promise(resolve => setTimeout(resolve, 400));
-    
-    const lowerQuery = query.toLowerCase();
-    return this.demoData.filter(company => 
-      company.name.toLowerCase().includes(lowerQuery) ||
-      company.tradeName?.toLowerCase().includes(lowerQuery) ||
-      company.taxId.includes(query)
-    );
+  /**
+   * Get active companies
+   */
+  async getActiveCompanies(): Promise<Company[]> {
+    const companies = await this.getCompanies();
+    return companies.filter(company => company.status === 'ACTIVE');
   }
 }
 

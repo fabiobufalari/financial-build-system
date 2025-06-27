@@ -1,407 +1,400 @@
 import { apiClient } from './apiClient';
-import { SERVICE_ENDPOINTS, DEMO_MODE } from '../config/apiConfig';
+import { SERVICE_ENDPOINTS } from '../config/apiConfig';
+import { Company } from './companyService';
+import { Person } from './personService';
 
-// EN: Employee service with full CRUD operations
-// PT: Serviço de funcionários com operações CRUD completas
-
+// Employee interfaces
 export interface Employee {
   id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
+  employeeId: string; // Internal employee ID
+  personId: string; // Reference to Person
+  companyId: string; // Reference to Company
+  person: Person; // Populated person data
+  company: Company; // Populated company data
   position: string;
   department: string;
   salary: number;
   hireDate: string;
   status: 'ACTIVE' | 'INACTIVE' | 'ON_LEAVE' | 'TERMINATED';
-  employeeId: string; // Internal employee ID
-  address: {
-    street: string;
-    number: string;
-    complement?: string;
-    neighborhood: string;
-    city: string;
-    state: string;
-    zipCode: string;
-    country: string;
-  };
-  emergencyContact: {
-    name: string;
-    relationship: string;
-    phone: string;
-  };
-  documents: {
-    cpf?: string; // Brazilian CPF
-    rg?: string; // Brazilian RG
-    passport?: string;
+  workLocation?: {
+    type: 'OFFICE' | 'REMOTE' | 'HYBRID' | 'FIELD';
+    address?: string;
+    coordinates?: {
+      latitude: number;
+      longitude: number;
+    };
   };
   benefits?: string[];
+  skills?: string[];
+  certifications?: {
+    name: string;
+    issuer: string;
+    issueDate: string;
+    expiryDate?: string;
+  }[];
+  manager?: {
+    employeeId: string;
+    name: string;
+  };
   notes?: string;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface CreateEmployeeRequest {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
+  personId: string;
+  companyId: string;
   position: string;
   department: string;
   salary: number;
   hireDate: string;
-  employeeId: string;
-  address: {
-    street: string;
-    number: string;
-    complement?: string;
-    neighborhood: string;
-    city: string;
-    state: string;
-    zipCode: string;
-    country: string;
-  };
-  emergencyContact: {
-    name: string;
-    relationship: string;
-    phone: string;
-  };
-  documents: {
-    cpf?: string;
-    rg?: string;
-    passport?: string;
+  workLocation?: {
+    type: 'OFFICE' | 'REMOTE' | 'HYBRID' | 'FIELD';
+    address?: string;
+    coordinates?: {
+      latitude: number;
+      longitude: number;
+    };
   };
   benefits?: string[];
+  skills?: string[];
+  certifications?: {
+    name: string;
+    issuer: string;
+    issueDate: string;
+    expiryDate?: string;
+  }[];
+  managerId?: string;
   notes?: string;
 }
 
-// Demo data for testing
-// EN: Demo data for testing purposes
-// PT: Dados demo para fins de teste
-const generateDemoEmployees = (): Employee[] => [
+export interface UpdateEmployeeRequest extends Partial<CreateEmployeeRequest> {
+  id: string;
+  status?: 'ACTIVE' | 'INACTIVE' | 'ON_LEAVE' | 'TERMINATED';
+}
+
+// Demo data for fallback
+const DEMO_EMPLOYEES: Employee[] = [
   {
-    id: 'emp-001',
-    firstName: 'João',
-    lastName: 'Silva',
-    email: 'joao.silva@bufalari.com',
-    phone: '+55 11 99999-1111',
-    position: 'Engenheiro Civil',
-    department: 'Engenharia',
-    salary: 8500.00,
-    hireDate: '2023-01-15',
-    status: 'ACTIVE',
+    id: '1',
     employeeId: 'EMP001',
-    address: {
-      street: 'Rua das Flores',
-      number: '123',
-      neighborhood: 'Jardim Paulista',
-      city: 'São Paulo',
-      state: 'SP',
-      zipCode: '01234-567',
-      country: 'Brasil'
+    personId: '1',
+    companyId: '1',
+    person: {
+      id: '1',
+      firstName: 'John',
+      lastName: 'Smith',
+      email: 'john.smith@constructionsolutions.ca',
+      phone: '+1-416-555-0101',
+      dateOfBirth: '1985-03-15',
+      gender: 'MALE',
+      nationality: 'Canadian',
+      status: 'ACTIVE',
+      createdAt: '2024-01-15T10:00:00Z',
+      updatedAt: '2024-01-15T10:00:00Z'
     },
-    emergencyContact: {
-      name: 'Maria Silva',
-      relationship: 'Esposa',
-      phone: '+55 11 88888-1111'
+    company: {
+      id: '1',
+      name: 'Construction Solutions Inc.',
+      description: 'Leading construction company',
+      type: 'CONSTRUCTION',
+      status: 'ACTIVE',
+      createdAt: '2024-01-15T10:00:00Z',
+      updatedAt: '2024-01-15T10:00:00Z'
     },
-    documents: {
-      cpf: '123.456.789-01',
-      rg: '12.345.678-9'
+    position: 'Senior Project Manager',
+    department: 'Construction',
+    salary: 85000,
+    hireDate: '2022-03-15',
+    status: 'ACTIVE',
+    workLocation: {
+      type: 'HYBRID',
+      address: '123 Builder St, Toronto, ON',
+      coordinates: {
+        latitude: 43.6532,
+        longitude: -79.3832
+      }
     },
-    benefits: ['Plano de Saúde', 'Vale Refeição', 'Vale Transporte'],
-    createdAt: '2023-01-15T09:00:00Z',
-    updatedAt: '2025-06-15T14:30:00Z'
+    benefits: ['Health Insurance', 'Dental', 'Vision', '401k'],
+    skills: ['Project Management', 'Construction', 'Leadership', 'AutoCAD'],
+    certifications: [
+      {
+        name: 'PMP Certification',
+        issuer: 'PMI',
+        issueDate: '2021-06-15',
+        expiryDate: '2024-06-15'
+      }
+    ],
+    createdAt: '2022-03-15T09:00:00Z',
+    updatedAt: '2024-01-15T10:00:00Z'
   },
   {
-    id: 'emp-002',
-    firstName: 'Ana',
-    lastName: 'Santos',
-    email: 'ana.santos@bufalari.com',
-    phone: '+55 11 99999-2222',
-    position: 'Arquiteta',
-    department: 'Projetos',
-    salary: 7500.00,
-    hireDate: '2023-03-20',
-    status: 'ACTIVE',
+    id: '2',
     employeeId: 'EMP002',
-    address: {
-      street: 'Avenida Paulista',
-      number: '456',
-      complement: 'Apto 101',
-      neighborhood: 'Bela Vista',
-      city: 'São Paulo',
-      state: 'SP',
-      zipCode: '01310-100',
-      country: 'Brasil'
+    personId: '2',
+    companyId: '2',
+    person: {
+      id: '2',
+      firstName: 'Maria',
+      lastName: 'Garcia',
+      email: 'maria.garcia@engexcellence.ca',
+      phone: '+1-604-555-0201',
+      dateOfBirth: '1990-07-22',
+      gender: 'FEMALE',
+      nationality: 'Canadian',
+      status: 'ACTIVE',
+      createdAt: '2024-02-01T14:30:00Z',
+      updatedAt: '2024-02-01T14:30:00Z'
     },
-    emergencyContact: {
-      name: 'Carlos Santos',
-      relationship: 'Pai',
-      phone: '+55 11 88888-2222'
+    company: {
+      id: '2',
+      name: 'Engineering Excellence Ltd.',
+      description: 'Structural and civil engineering services',
+      type: 'ENGINEERING',
+      status: 'ACTIVE',
+      createdAt: '2024-02-01T14:30:00Z',
+      updatedAt: '2024-02-01T14:30:00Z'
     },
-    documents: {
-      cpf: '987.654.321-01',
-      rg: '98.765.432-1'
+    position: 'Structural Engineer',
+    department: 'Engineering',
+    salary: 75000,
+    hireDate: '2023-01-10',
+    status: 'ACTIVE',
+    workLocation: {
+      type: 'OFFICE',
+      address: '456 Engineer Ave, Vancouver, BC'
     },
-    benefits: ['Plano de Saúde', 'Vale Refeição'],
-    createdAt: '2023-03-20T10:30:00Z',
-    updatedAt: '2025-06-10T16:45:00Z'
+    benefits: ['Health Insurance', 'Dental', 'Professional Development'],
+    skills: ['Structural Analysis', 'AutoCAD', 'Revit', 'ETABS'],
+    createdAt: '2023-01-10T08:30:00Z',
+    updatedAt: '2024-02-01T14:30:00Z'
   },
   {
-    id: 'emp-003',
-    firstName: 'Pedro',
-    lastName: 'Oliveira',
-    email: 'pedro.oliveira@bufalari.com',
-    phone: '+55 11 99999-3333',
-    position: 'Mestre de Obras',
-    department: 'Produção',
-    salary: 5500.00,
-    hireDate: '2022-08-10',
-    status: 'ACTIVE',
+    id: '3',
     employeeId: 'EMP003',
-    address: {
-      street: 'Rua dos Trabalhadores',
-      number: '789',
-      neighborhood: 'Vila Operária',
-      city: 'São Paulo',
-      state: 'SP',
-      zipCode: '03456-789',
-      country: 'Brasil'
+    personId: '3',
+    companyId: '3',
+    person: {
+      id: '3',
+      firstName: 'David',
+      lastName: 'Johnson',
+      email: 'david.johnson@projectconsulting.ca',
+      phone: '+1-403-555-0301',
+      dateOfBirth: '1988-11-08',
+      gender: 'MALE',
+      nationality: 'Canadian',
+      status: 'ACTIVE',
+      createdAt: '2024-03-10T09:15:00Z',
+      updatedAt: '2024-03-10T09:15:00Z'
     },
-    emergencyContact: {
-      name: 'Lucia Oliveira',
-      relationship: 'Mãe',
-      phone: '+55 11 88888-3333'
+    company: {
+      id: '3',
+      name: 'Project Consulting Group',
+      description: 'Construction project management and consulting',
+      type: 'CONSULTING',
+      status: 'ACTIVE',
+      createdAt: '2024-03-10T09:15:00Z',
+      updatedAt: '2024-03-10T09:15:00Z'
     },
-    documents: {
-      cpf: '456.789.123-01',
-      rg: '45.678.912-3'
+    position: 'Project Consultant',
+    department: 'Consulting',
+    salary: 70000,
+    hireDate: '2023-06-01',
+    status: 'ACTIVE',
+    workLocation: {
+      type: 'FIELD',
+      address: 'Various project sites'
     },
-    benefits: ['Vale Refeição', 'Vale Transporte'],
-    createdAt: '2022-08-10T08:00:00Z',
-    updatedAt: '2025-06-05T12:20:00Z'
+    benefits: ['Health Insurance', 'Travel Allowance'],
+    skills: ['Project Management', 'Consulting', 'Risk Assessment'],
+    createdAt: '2023-06-01T10:00:00Z',
+    updatedAt: '2024-03-10T09:15:00Z'
   }
 ];
 
 class EmployeeService {
-  private baseUrl = SERVICE_ENDPOINTS.employees;
-  private demoData = generateDemoEmployees();
+  private baseUrl: string;
+  private demoData: Employee[];
+
+  constructor() {
+    this.baseUrl = SERVICE_ENDPOINTS.employees;
+    this.demoData = [...DEMO_EMPLOYEES];
+  }
 
   /**
    * Get all employees
-   * EN: Retrieves all employees with optional filtering
-   * PT: Recupera todos os funcionários com filtragem opcional
    */
-  async getAllEmployees(department?: string, status?: string): Promise<Employee[]> {
+  async getEmployees(): Promise<Employee[]> {
     try {
-      if (DEMO_MODE) {
-        return this.demoGetAllEmployees(department, status);
-      }
-
-      let url = this.baseUrl;
-      const params = new URLSearchParams();
-      if (department) params.append('department', department);
-      if (status) params.append('status', status);
-      if (params.toString()) url += `?${params.toString()}`;
-
-      const response = await apiClient.get<Employee[]>(url);
+      console.log('👨‍💼 Fetching employees from API:', this.baseUrl);
+      const response = await apiClient.get<Employee[]>(`${this.baseUrl}`);
+      console.log('✅ Employees fetched successfully:', response.data);
       return response.data;
-    } catch (error) {
-      console.warn('Real API failed, falling back to demo mode:', error);
-      return this.demoGetAllEmployees(department, status);
+    } catch (error: any) {
+      console.warn('❌ API call failed, using demo data:', error.message);
+      return this.demoData;
     }
   }
 
   /**
    * Get employee by ID
-   * EN: Retrieves a specific employee by their ID
-   * PT: Recupera um funcionário específico pelo seu ID
    */
-  async getEmployeeById(id: string): Promise<Employee> {
+  async getEmployeeById(id: string): Promise<Employee | null> {
     try {
-      if (DEMO_MODE) {
-        return this.demoGetEmployeeById(id);
-      }
-
+      console.log('👨‍💼 Fetching employee by ID:', id);
       const response = await apiClient.get<Employee>(`${this.baseUrl}/${id}`);
+      console.log('✅ Employee fetched successfully:', response.data);
       return response.data;
-    } catch (error) {
-      console.warn('Real API failed, falling back to demo mode:', error);
-      return this.demoGetEmployeeById(id);
+    } catch (error: any) {
+      console.warn('❌ API call failed, using demo data:', error.message);
+      const employee = this.demoData.find(e => e.id === id);
+      return employee || null;
     }
   }
 
   /**
    * Create new employee
-   * EN: Creates a new employee
-   * PT: Cria um novo funcionário
    */
   async createEmployee(employeeData: CreateEmployeeRequest): Promise<Employee> {
     try {
-      if (DEMO_MODE) {
-        return this.demoCreateEmployee(employeeData);
-      }
-
-      const response = await apiClient.post<Employee>(this.baseUrl, employeeData);
+      console.log('👨‍💼 Creating employee via API:', employeeData);
+      const response = await apiClient.post<Employee>(`${this.baseUrl}`, employeeData);
+      console.log('✅ Employee created successfully:', response.data);
       return response.data;
-    } catch (error) {
-      console.warn('Real API failed, falling back to demo mode:', error);
-      return this.demoCreateEmployee(employeeData);
+    } catch (error: any) {
+      console.warn('❌ API call failed, creating in demo data:', error.message);
+      
+      // Create in demo data
+      const newEmployee: Employee = {
+        id: Date.now().toString(),
+        employeeId: `EMP${String(this.demoData.length + 1).padStart(3, '0')}`,
+        ...employeeData,
+        person: {
+          id: employeeData.personId,
+          firstName: 'Demo',
+          lastName: 'Person',
+          email: 'demo@example.com',
+          status: 'ACTIVE',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        },
+        company: {
+          id: employeeData.companyId,
+          name: 'Demo Company',
+          type: 'CONSTRUCTION',
+          status: 'ACTIVE',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        },
+        status: 'ACTIVE',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      this.demoData.push(newEmployee);
+      console.log('✅ Employee created in demo data:', newEmployee);
+      return newEmployee;
     }
   }
 
   /**
    * Update employee
-   * EN: Updates an existing employee
-   * PT: Atualiza um funcionário existente
    */
-  async updateEmployee(id: string, employeeData: Partial<CreateEmployeeRequest>): Promise<Employee> {
+  async updateEmployee(employeeData: UpdateEmployeeRequest): Promise<Employee> {
     try {
-      if (DEMO_MODE) {
-        return this.demoUpdateEmployee(id, employeeData);
-      }
-
-      const response = await apiClient.put<Employee>(`${this.baseUrl}/${id}`, employeeData);
+      console.log('👨‍💼 Updating employee via API:', employeeData);
+      const response = await apiClient.put<Employee>(`${this.baseUrl}/${employeeData.id}`, employeeData);
+      console.log('✅ Employee updated successfully:', response.data);
       return response.data;
-    } catch (error) {
-      console.warn('Real API failed, falling back to demo mode:', error);
-      return this.demoUpdateEmployee(id, employeeData);
+    } catch (error: any) {
+      console.warn('❌ API call failed, updating in demo data:', error.message);
+      
+      // Update in demo data
+      const index = this.demoData.findIndex(e => e.id === employeeData.id);
+      if (index !== -1) {
+        this.demoData[index] = {
+          ...this.demoData[index],
+          ...employeeData,
+          updatedAt: new Date().toISOString()
+        };
+        console.log('✅ Employee updated in demo data:', this.demoData[index]);
+        return this.demoData[index];
+      }
+      throw new Error('Employee not found');
     }
   }
 
   /**
    * Delete employee
-   * EN: Deletes an employee (soft delete - changes status to TERMINATED)
-   * PT: Exclui um funcionário (exclusão suave - altera status para TERMINATED)
    */
-  async deleteEmployee(id: string): Promise<void> {
+  async deleteEmployee(id: string): Promise<boolean> {
     try {
-      if (DEMO_MODE) {
-        return this.demoDeleteEmployee(id);
-      }
-
+      console.log('👨‍💼 Deleting employee via API:', id);
       await apiClient.delete(`${this.baseUrl}/${id}`);
-    } catch (error) {
-      console.warn('Real API failed, falling back to demo mode:', error);
-      return this.demoDeleteEmployee(id);
+      console.log('✅ Employee deleted successfully');
+      return true;
+    } catch (error: any) {
+      console.warn('❌ API call failed, deleting from demo data:', error.message);
+      
+      // Delete from demo data
+      const index = this.demoData.findIndex(e => e.id === id);
+      if (index !== -1) {
+        this.demoData.splice(index, 1);
+        console.log('✅ Employee deleted from demo data');
+        return true;
+      }
+      return false;
     }
   }
 
   /**
-   * Search employees
-   * EN: Searches employees by name, email, or employee ID
-   * PT: Busca funcionários por nome, email ou ID do funcionário
+   * Search employees by name, position, or department
    */
   async searchEmployees(query: string): Promise<Employee[]> {
-    try {
-      if (DEMO_MODE) {
-        return this.demoSearchEmployees(query);
-      }
+    const employees = await this.getEmployees();
+    const lowercaseQuery = query.toLowerCase();
+    
+    return employees.filter(employee => 
+      employee.person.firstName.toLowerCase().includes(lowercaseQuery) ||
+      employee.person.lastName.toLowerCase().includes(lowercaseQuery) ||
+      employee.position.toLowerCase().includes(lowercaseQuery) ||
+      employee.department.toLowerCase().includes(lowercaseQuery) ||
+      employee.employeeId.toLowerCase().includes(lowercaseQuery)
+    );
+  }
 
-      const response = await apiClient.get<Employee[]>(`${this.baseUrl}/search?q=${encodeURIComponent(query)}`);
-      return response.data;
-    } catch (error) {
-      console.warn('Real API failed, falling back to demo mode:', error);
-      return this.demoSearchEmployees(query);
-    }
+  /**
+   * Get employees by company
+   */
+  async getEmployeesByCompany(companyId: string): Promise<Employee[]> {
+    const employees = await this.getEmployees();
+    return employees.filter(employee => employee.companyId === companyId);
   }
 
   /**
    * Get employees by department
-   * EN: Retrieves employees filtered by department
-   * PT: Recupera funcionários filtrados por departamento
    */
   async getEmployeesByDepartment(department: string): Promise<Employee[]> {
-    return this.getAllEmployees(department);
+    const employees = await this.getEmployees();
+    return employees.filter(employee => employee.department === department);
   }
 
-  // Demo mode methods
-  // EN: Demo mode methods for testing
-  // PT: Métodos do modo demo para teste
-
-  private async demoGetAllEmployees(department?: string, status?: string): Promise<Employee[]> {
-    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API delay
-    
-    let filteredData = [...this.demoData];
-    
-    if (department) {
-      filteredData = filteredData.filter(emp => emp.department === department);
-    }
-    
-    if (status) {
-      filteredData = filteredData.filter(emp => emp.status === status);
-    }
-    
-    return filteredData;
+  /**
+   * Get active employees
+   */
+  async getActiveEmployees(): Promise<Employee[]> {
+    const employees = await this.getEmployees();
+    return employees.filter(employee => employee.status === 'ACTIVE');
   }
 
-  private async demoGetEmployeeById(id: string): Promise<Employee> {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    const employee = this.demoData.find(e => e.id === id);
-    if (!employee) {
-      throw new Error('Employee not found');
-    }
-    return { ...employee };
-  }
-
-  private async demoCreateEmployee(employeeData: CreateEmployeeRequest): Promise<Employee> {
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    const newEmployee: Employee = {
-      id: `emp-${Date.now()}`,
-      ...employeeData,
-      status: 'ACTIVE',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    
-    this.demoData.push(newEmployee);
-    return { ...newEmployee };
-  }
-
-  private async demoUpdateEmployee(id: string, employeeData: Partial<CreateEmployeeRequest>): Promise<Employee> {
-    await new Promise(resolve => setTimeout(resolve, 600));
-    
-    const index = this.demoData.findIndex(e => e.id === id);
-    if (index === -1) {
-      throw new Error('Employee not found');
-    }
-    
-    this.demoData[index] = {
-      ...this.demoData[index],
-      ...employeeData,
-      updatedAt: new Date().toISOString()
-    };
-    
-    return { ...this.demoData[index] };
-  }
-
-  private async demoDeleteEmployee(id: string): Promise<void> {
-    await new Promise(resolve => setTimeout(resolve, 400));
-    
-    const index = this.demoData.findIndex(e => e.id === id);
-    if (index === -1) {
-      throw new Error('Employee not found');
-    }
-    
-    // Soft delete - change status to TERMINATED
-    this.demoData[index].status = 'TERMINATED';
-    this.demoData[index].updatedAt = new Date().toISOString();
-  }
-
-  private async demoSearchEmployees(query: string): Promise<Employee[]> {
-    await new Promise(resolve => setTimeout(resolve, 400));
-    
-    const lowerQuery = query.toLowerCase();
-    return this.demoData.filter(employee => 
-      employee.firstName.toLowerCase().includes(lowerQuery) ||
-      employee.lastName.toLowerCase().includes(lowerQuery) ||
-      employee.email.toLowerCase().includes(lowerQuery) ||
-      employee.employeeId.toLowerCase().includes(lowerQuery) ||
-      employee.position.toLowerCase().includes(lowerQuery)
+  /**
+   * Get employees with location data for maps
+   */
+  async getEmployeesWithLocation(): Promise<Employee[]> {
+    const employees = await this.getEmployees();
+    return employees.filter(employee => 
+      employee.workLocation?.coordinates?.latitude && 
+      employee.workLocation?.coordinates?.longitude
     );
   }
 }
