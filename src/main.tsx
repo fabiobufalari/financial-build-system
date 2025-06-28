@@ -1,15 +1,24 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { BrowserRouter } from 'react-router-dom'
 import App from './App.tsx'
 import './index.css'
-import './i18n' // Import i18n configuration
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <BrowserRouter>
+console.log('🚀 Starting React application...');
+
+const rootElement = document.getElementById('root');
+console.log('📍 Root element:', rootElement);
+
+if (rootElement) {
+  const root = ReactDOM.createRoot(rootElement);
+  console.log('✅ React root created');
+  
+  root.render(
+    <React.StrictMode>
       <App />
-    </BrowserRouter>
-  </React.StrictMode>,
-)
+    </React.StrictMode>
+  );
+  console.log('🎯 App rendered');
+} else {
+  console.error('❌ Root element not found!');
+}
 

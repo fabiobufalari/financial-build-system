@@ -29,7 +29,7 @@ export interface ServiceEndpoints {
 // EN: Default configuration for development environment
 // PT: Configuração padrão para ambiente de desenvolvimento
 export const DEFAULT_API_CONFIG: ApiConfig = {
-  baseUrl: process.env.REACT_APP_API_BASE_URL || 'http://buildingteste.ddns.net',
+  baseUrl: import.meta.env?.VITE_API_BASE_URL || 'http://buildingteste.ddns.net',
   timeout: 30000,
   retries: 3
 };
@@ -57,7 +57,7 @@ export const SERVICE_ENDPOINTS: ServiceEndpoints = {
 // Demo mode configuration - now defaults to false to try real API first
 // EN: Configuration for demo mode with mock data - tries real API first
 // PT: Configuração para modo demo com dados simulados - tenta API real primeiro
-export const DEMO_MODE = process.env.REACT_APP_DEMO_MODE === 'true' || false;
+export const DEMO_MODE = import.meta.env?.VITE_DEMO_MODE === 'true' || false;
 
 // Demo credentials for fallback only
 // EN: Demo credentials for testing purposes when API is unavailable

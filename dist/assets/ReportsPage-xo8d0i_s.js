@@ -1,1 +1,0 @@
-import{u as t,j as s}from"./index-DXA_vukq.js";const a=()=>{const{t:e}=t();return s.jsxs("div",{className:"p-6",children:[s.jsx("h1",{className:"text-2xl font-bold mb-4",children:e("nav.reports")}),s.jsx("p",{className:"text-gray-600",children:e("pages.reports.description")})]})};export{a as default};
