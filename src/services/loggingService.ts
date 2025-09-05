@@ -55,6 +55,11 @@ class LoggingService {
     this.initializeLogging();
     this.setupNetworkListeners();
   }
+  logEvent(event: string, data?: any): void {
+      // Exemplo básico de implementação
+      console.log(`[${new Date().toISOString()}] Event: ${event}`, data || {});
+      // pode aqui enviar para API ou chamar algum método específico
+    }
 
   /**
    * Initialize logging service

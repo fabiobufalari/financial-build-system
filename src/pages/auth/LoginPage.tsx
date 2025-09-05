@@ -189,7 +189,7 @@ const LoginPage: React.FC = () => {
             🏗️
           </div>
           <h1 className="login-title">Building Dreams</h1>
-          <p className="login-subtitle">Financial Build System</p>
+          <p className="login-subtitle">Building Solutions</p>
         </div>
 
         {/* Login form */}
@@ -271,8 +271,9 @@ const LoginPage: React.FC = () => {
           Developed by Fabio Bufalari
         </div>
         <div className="contact-info">
-          Contact: <a href="mailto:bufalari.fabio@gmail.com">bufalari.fabio@gmail.com</a><br />
-          15 years of experience delivering innovative technology solutions
+          Based in Halifax, Nova Scotia, Canada<br />
+          For inquiries, please contact: <a href="mailto:bufalari.fabio@gmail.com">bufalari.fabio@gmail.com</a><br />
+          With over 15 years of experience delivering innovative solutions to the construction industry.
         </div>
       </div>
     </div>
