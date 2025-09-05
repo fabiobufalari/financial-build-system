@@ -17,6 +17,24 @@ interface ApiStatus {
   mode: string;
 }
 
+interface AuthResponse {
+  success: boolean;
+  data?: {
+    user?: {
+      id: any;
+      name: any;
+      role: any;
+    };
+    tokens: {
+      accessToken: string;
+      refreshToken: string;
+      expiresIn: number;
+      tokenType: string;
+    };
+  };
+  message?: string;
+}
+
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
@@ -107,11 +125,11 @@ const LoginPage: React.FC = () => {
       if (response.success && response.data) {
         // Create user object with available data
         const userData = {
-          id: response.data.user?.id || '',
-          email: formData.username, // Use the login username as email
-          name: response.data.user?.name || formData.username,
-          role: response.data.user?.role || 'user'
-        };
+		  id: response.data.user?.id || '',
+		  email: formData.username,
+		  name: response.data.user?.name || formData.username,
+		  role: response.data.user?.role || 'user'
+		};
 
         // Set authentication data
         setAuthData(userData, response.data.tokens);
