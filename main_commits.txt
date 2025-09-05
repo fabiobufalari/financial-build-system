@@ -1,0 +1,28 @@
+72815c8b fix: Resolve import.meta.env TypeScript errors and ensure build success
+17542f6b fix: Resolve all TypeScript errors and restore full application
+d62c07e2 feat: implement complete CRUD services with dependencies
+82454330 Merge branch 'main' of https://github.com/fabiobufalari/financial-recovery-system
+3bde7fe8 fix: resolve build errors and create missing components
+b229bf24 ajuste na traducao
+d9da5759 ajuste na traducao
+817589b4 feat: implement complete internationalization system
+40b9673d fix: Correct authentication service to work with real API structure
+c188301f fix: Implement real API authentication with fallback to demo mode
+52215b12 fix: Resolve TypeScript compilation errors and update navigation
+a19b006e feat: Implement Employee Management and Maps pages with search functionality
+f623a227 feat: Implement comprehensive CRUD services for financial system
+82b2af59 test: Verify login system functionality - all tests passed
+c3fc3aa4 fix: Implement fully functional mock authentication system
+a928a729 feat: Add French language support and improve bilingual comments
+25ce560b Versão 1.0.0: Implementação do mapa de projetos com visualização satélite e 3D funcional
+b68281b0 Correção do menu Mapa de Projetos e funcionalidade de ocultar menu
+16e27bc2 Implementação do Mapa de Projetos com visualização avançada e menu retrátil
+541dd3c5 Implementação completa de todas as funcionalidades e alteração para Financial Solutions
+ce5945fc 🔧 Fix TypeScript errors: Correct user.role to user.roles and login function signature
+78f7cd2e 🔄 Alteração de nome do sistema: Financial Recovery → Strong Financial Building
+bb42884c 🔧 Correções visuais críticas: Traduções completas e layout otimizado
+e1a443ce 🚀 Sistema 100% funcional: Dashboard com dados reais, menu responsivo, login otimizado, navegação intuitiva e 4 idiomas
+60235a4e ajuste no docker
+d755c616 feat: implementar dashboard futurista com KPIs financeiros, mapa interativo e integração climática
+3ac589ae fix: corrigir endpoints de autenticação para integração com backend real
+081cf233 ajuste no manus.ai
