@@ -55,11 +55,28 @@ class LoggingService {
     this.initializeLogging();
     this.setupNetworkListeners();
   }
-  logEvent(event: string, data?: any): void {
-      // Exemplo básico de implementação
-      console.log(`[${new Date().toISOString()}] Event: ${event}`, data || {});
-      // pode aqui enviar para API ou chamar algum método específico
+  
+  /** Método público compatível com LoginPage */
+  public async logEvent(event: string, data?: Record<string, any>): Promise<void> {
+    try {
+      const payload: UserActivity = {
+        userId: this.currentUser?.id || 'anonymous',
+        username: this.currentUser?.username || 'anonymous',
+        activityType: 'API_CALL', // genérico
+        description: event,
+        sessionId: this.sessionId,
+        timestamp: new Date().toISOString(),
+        userAgent: navigator.userAgent,
+        ipAddress: await this.getUserIP(),
+        metadata: data || {}
+      };
+      console.log(`[LoggingService] ${event}`, payload);
+      // Opcional: enviar para API
+      // await apiClient.post(`${this.baseUrl}/event`, payload);
+    } catch (err) {
+      console.error('LoggingService.logEvent error:', err);
     }
+  }
 
   /**
    * Initialize logging service

@@ -19,8 +19,8 @@ interface ApiStatus {
 
 interface AuthResponse {
   success: boolean;
-  data?: {
-    user?: {
+  data: {
+    user: {
       id: any;
       name: any;
       role: any;
