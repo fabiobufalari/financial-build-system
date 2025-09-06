@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-// Certifique-se de que AuthResponse, AuthTokens e UserData são exportados de authService
-// OU ajuste o caminho se elas estiverem em um arquivo de tipos separado (e.g., ../../types/auth)
+// ✅ Importe AuthResponse, AuthTokens e UserData do authService
 import { authService, AuthResponse, AuthTokens, UserData } from '../../services/authService'; 
-import { loggingService } from '../../services/loggingService';
+import { loggingService } from '../../services/loggingService'; // Assumo que o caminho está correto
 import { useAuthStore } from '../../stores/authStore';
 import './LoginPage.css';
 
@@ -37,20 +36,18 @@ const LoginPage: React.FC = () => {
   useEffect(() => {
     const checkApiStatus = async () => {
       try {
-        // Para uma checagem de status de API mais robusta, é melhor usar um endpoint que retorne 200 OK.
-        // O `mode: 'no-cors'` com `HEAD` pode não ser confiável para determinar conectividade real da API,
-        // pois ele não revelará erros de rede (cors, etc.) e pode retornar sucesso mesmo que o servidor não responda.
-        // Se houver um endpoint /health ou /status na sua API, use-o.
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 segundos de timeout
+        const timeoutId = setTimeout(() => controller.abort(), 5000); 
         
+        // Use o endpoint de health check do authService, se existir, ou ajuste o caminho.
+        // authService.checkApiHealth() é uma boa opção se você quiser que o authService gerencie isso.
         const response = await fetch(apiStatus.endpoint.replace('/auth/login', '/health') || apiStatus.endpoint, { 
-          method: 'GET', // Usar GET é mais comum para health checks
-          signal: controller.signal // Adicionar o signal para o timeout
+          method: 'GET', 
+          signal: controller.signal 
         });
         clearTimeout(timeoutId);
 
-        if (response.ok) { // Verifica se a resposta foi bem-sucedida (status 2xx)
+        if (response.ok) { 
           setApiStatus(prev => ({ ...prev, connected: true }));
         } else {
           setApiStatus(prev => ({ ...prev, connected: false }));
@@ -80,67 +77,41 @@ const LoginPage: React.FC = () => {
     setError(null);
 
     try {
-      // ✅ Logging attempt
-      await loggingService.logEvent('login_attempt', {
-        username: formData.username,
-        timestamp: new Date().toISOString(),
-        userAgent: navigator.userAgent
-      });
+      // ✅ Chamada ao método específico de login do loggingService, ou ajuste seu `logEvent`
+      // O `logEvent` no `loggingService` que você forneceu é genérico.
+      // Vou usar `loggingService.logLogin` que é mais adequado para este propósito.
+      // Se você REALMENTE precisa de `logEvent` com essa assinatura, avise-me.
+      await loggingService.logLogin(formData.username, false, 'CREDENTIALS', 'Login attempt');
 
-      // ✅ Login
-      // A resposta agora é do tipo AuthResponse, que inclui accessToken, refreshToken, expiresIn e user
+      // ✅ Login - a resposta agora é do tipo AuthResponse
       const response: AuthResponse = await authService.login({
         username: formData.username,
         password: formData.password
       });
 
-      // ✅ Tokens (extraídos diretamente da resposta)
-      const tokens: AuthTokens = {
-        accessToken: response.accessToken,
-        refreshToken: response.refreshToken,
-        expiresIn: response.expiresIn || 3600, // Usar fallback se expiresIn for opcional na resposta
-        tokenType: 'Bearer' // Assumindo que é sempre 'Bearer'
-      };
+      // ✅ Os tokens e dados do usuário já vêm aninhados na 'response'
+      const tokens: AuthTokens = response.tokens;
+      const userData: UserData = response.user;
 
-      // ✅ User data (extraídos diretamente da resposta e mapeados para UserData)
-      const userData: UserData = {
-        id: response.user.id,
-        email: response.user.email,
-        firstName: response.user.firstName,
-        lastName: response.user.lastName,
-        // Garante que roles é um array de strings
-        role: response.user.roles && response.user.roles.length > 0 ? response.user.roles[0] : 'USER', 
-        permissions: response.user.permissions || ['READ'],
-        companyId: response.user.companyId || '', // Adicionado, se sua API retornar companyId
-        isActive: response.user.isActive ?? true, // Adicionado, se sua API retornar isActive
-        lastLogin: response.user.lastLogin || new Date().toISOString(), // Adicionado, se sua API retornar lastLogin
-        createdAt: response.user.createdAt || new Date().toISOString(), // Adicionado, se sua API retornar createdAt
-        updatedAt: response.user.updatedAt || new Date().toISOString() // Adicionado, se sua API retornar updatedAt
-      };
-
-      // ✅ Correct order: tokens first, user second
+      // ✅ Passa os objetos completos para setAuthData
       setAuthData(tokens, userData);
 
       // ✅ Logging success
-      await loggingService.logEvent('login_success', {
-        userId: userData.id,
-        email: userData.email,
-        timestamp: new Date().toISOString()
-      });
+      await loggingService.logLogin(userData.username, true, 'CREDENTIALS');
 
       navigate('/dashboard');
     } catch (err: any) {
       console.error('Login failed:', err);
-      // Se a sua AuthResponse tiver uma propriedade `message` para erros, você pode usá-la.
-      // Caso contrário, o erro genérico está OK.
+      // Use a mensagem de erro da exceção lançada pelo authService
       setError(err.message || t('login.authFailed')); 
 
       // ✅ Logging failure
-      await loggingService.logEvent('login_failure', {
-        username: formData.username,
-        error: err.message,
-        timestamp: new Date().toISOString()
-      });
+      await loggingService.logLogin(
+        formData.username,
+        false,
+        'CREDENTIALS',
+        err.message || 'Authentication failed.'
+      );
     } finally {
       setIsLoading(false);
     }

@@ -15,18 +15,17 @@ export interface RegisterRequest {
   roles?: string[];
 }
 
-// Real API response interface (o que sua API realmente retorna)
+// Interface para o que a API REALMENTE retorna no corpo da resposta de login/registro/refresh
 export interface RealApiAuthResponse {
   accessToken: string;
   refreshToken: string;
-  expiresIn?: number; // Adicionado, caso sua API retorne o tempo de expiração aqui
+  expiresIn?: number; // Tempo de expiração do token (em segundos, por exemplo)
   userId: string;
   username: string;
   email: string;
   firstName: string;
   lastName: string;
   roles: string[];
-  // Adicionado para consistência com o que o LoginPage.tsx espera
   companyId?: string;
   isActive?: boolean;
   lastLogin?: string;
@@ -34,7 +33,7 @@ export interface RealApiAuthResponse {
   updatedAt?: string;
 }
 
-// Interface para os dados do usuário, usada internamente e no AuthResponse
+// Interface para os dados do usuário que serão armazenados e usados no frontend
 export interface UserData {
   id: string;
   username: string;
@@ -42,28 +41,36 @@ export interface UserData {
   firstName: string;
   lastName: string;
   roles: string[];
-  permissions: string[];
-  companyId?: string; // Tornando opcional, se a API não retornar sempre
-  isActive?: boolean; // Tornando opcional
-  lastLogin?: string; // Tornando opcional
-  createdAt?: string; // Tornando opcional
-  updatedAt?: string; // Tornando opcional
+  permissions: string[]; // Calculadas no frontend
+  companyId?: string;
+  isActive?: boolean;
+  lastLogin?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// Interface para os tokens que serão armazenados e passados para o store de autenticação
+export interface AuthTokens {
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number; // Em segundos
+  tokenType: string; // Ex: 'Bearer'
 }
 
 // Normalized response para frontend (o que o frontend realmente usa e espera)
+// Esta é a interface que `authService.login` e outros retornarão.
 export interface AuthResponse {
-  accessToken: string;
-  refreshToken: string;
-  user: UserData; // Usando a nova interface UserData
-  expiresIn: number; // Agora é obrigatório aqui, definido por padrão no normalizeApiResponse
+  tokens: AuthTokens; // Contém accessToken, refreshToken, expiresIn, tokenType
+  user: UserData; // Contém os dados do usuário
 }
 
-// Esta interface User parece ser para o `getCurrentUser`, vamos alinhá-la com UserData
-export interface User extends UserData {} // 'User' agora estende 'UserData' para consistência
+// 'User' agora é um alias para 'UserData' para consistência
+export interface User extends UserData {}
 
 class AuthService {
   private baseUrl = SERVICE_ENDPOINTS.auth;
 
+  // Método para normalizar a resposta bruta da API para o formato esperado pelo frontend
   private normalizeApiResponse(realResponse: RealApiAuthResponse): AuthResponse {
     const permissions = realResponse.roles.includes('ROLE_ADMIN')
       ? ['CREATE', 'READ', 'UPDATE', 'DELETE']
@@ -72,8 +79,12 @@ class AuthService {
       : ['READ'];
 
     return {
-      accessToken: realResponse.accessToken,
-      refreshToken: realResponse.refreshToken,
+      tokens: {
+        accessToken: realResponse.accessToken,
+        refreshToken: realResponse.refreshToken,
+        expiresIn: realResponse.expiresIn || 3600, // Usa da API ou 1 hora padrão
+        tokenType: 'Bearer' // Assumindo que sempre será Bearer
+      },
       user: {
         id: realResponse.userId,
         username: realResponse.username,
@@ -82,14 +93,12 @@ class AuthService {
         lastName: realResponse.lastName,
         roles: realResponse.roles,
         permissions,
-        // ✅ Adicionado: Mapeia as novas propriedades da API para UserData
         companyId: realResponse.companyId,
         isActive: realResponse.isActive,
         lastLogin: realResponse.lastLogin,
         createdAt: realResponse.createdAt,
         updatedAt: realResponse.updatedAt,
-      },
-      expiresIn: realResponse.expiresIn || 3600 // Usar da API se disponível, senão padrão de 1 hora
+      }
     };
   }
 
@@ -98,14 +107,14 @@ class AuthService {
       const response = await apiClient.post<RealApiAuthResponse>(`${this.baseUrl}/login`, credentials);
       const normalizedResponse = this.normalizeApiResponse(response.data);
 
-      localStorage.setItem('accessToken', normalizedResponse.accessToken);
-      localStorage.setItem('refreshToken', normalizedResponse.refreshToken);
-      // Armazenar o objeto user completo
-      localStorage.setItem('user', JSON.stringify(normalizedResponse.user)); 
+      localStorage.setItem('accessToken', normalizedResponse.tokens.accessToken);
+      localStorage.setItem('refreshToken', normalizedResponse.tokens.refreshToken);
+      localStorage.setItem('user', JSON.stringify(normalizedResponse.user));
+      // Não precisamos armazenar expiresIn ou tokenType aqui, pois eles estão no `normalizedResponse.tokens`
+      // e o `setAuthData` do store cuidará disso.
 
       return normalizedResponse;
     } catch (error: any) {
-      // ✅ Mensagem de erro clara
       throw new Error(error.response?.data?.message || 'Authentication failed. Please check your credentials.');
     }
   }
@@ -115,8 +124,8 @@ class AuthService {
       const response = await apiClient.post<RealApiAuthResponse>(`${this.baseUrl}/register`, userData);
       const normalizedResponse = this.normalizeApiResponse(response.data);
 
-      localStorage.setItem('accessToken', normalizedResponse.accessToken);
-      localStorage.setItem('refreshToken', normalizedResponse.refreshToken);
+      localStorage.setItem('accessToken', normalizedResponse.tokens.accessToken);
+      localStorage.setItem('refreshToken', normalizedResponse.tokens.refreshToken);
       localStorage.setItem('user', JSON.stringify(normalizedResponse.user));
 
       return normalizedResponse;
@@ -130,10 +139,9 @@ class AuthService {
       const response = await apiClient.post<RealApiAuthResponse>(`${this.baseUrl}/refresh`, { refreshToken });
       const normalizedResponse = this.normalizeApiResponse(response.data);
 
-      localStorage.setItem('accessToken', normalizedResponse.accessToken);
-      localStorage.setItem('refreshToken', normalizedResponse.refreshToken);
-      // Se o refresh token também atualizar os dados do usuário, você pode precisar armazenar user aqui também.
-      // Por simplicidade, vou manter apenas tokens como era, mas ajuste se necessário.
+      localStorage.setItem('accessToken', normalizedResponse.tokens.accessToken);
+      localStorage.setItem('refreshToken', normalizedResponse.tokens.refreshToken);
+      // Se o refresh token também atualizar os dados do usuário, armazene user aqui também:
       // localStorage.setItem('user', JSON.stringify(normalizedResponse.user)); 
 
       return normalizedResponse;
@@ -168,7 +176,6 @@ class AuthService {
         headers: { Authorization: `Bearer ${token}` }
       });
       const normalizedResponse = this.normalizeApiResponse(response.data);
-      // Retorna UserData, que agora é a mesma que a interface User
       return normalizedResponse.user; 
     } catch (error) {
       localStorage.removeItem('accessToken');
@@ -187,10 +194,13 @@ class AuthService {
       const currentTime = Date.now() / 1000;
       return payload.exp > currentTime;
     } catch {
-      // Se o token for inválido, mas houver um usuário no localStorage,
-      // podemos considerar autenticado, mas é bom ter cuidado aqui.
-      // O ideal é que o token JWT seja a única fonte de verdade.
-      return !!localStorage.getItem('user'); 
+      // Se o token for inválido/malformado, mas houver um usuário no localStorage,
+      // podemos considerar autenticado, mas o ideal é que o token JWT seja a única fonte de verdade.
+      // Para fins de segurança, é melhor ser mais rigoroso e pedir novo login.
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
+      return false; 
     }
   }
 
