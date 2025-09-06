@@ -79,6 +79,7 @@ const RegisterPage: React.FC = () => {
         password: formData.password
       });
 
+      // ✅ Tokens primeiro, user depois (compatível com store)
       const tokens = {
         accessToken: response.accessToken,
         refreshToken: response.refreshToken,
@@ -100,7 +101,7 @@ const RegisterPage: React.FC = () => {
         updatedAt: new Date().toISOString()
       };
 
-      setAuthData(userData, tokens);
+      setAuthData(tokens, userData);
       navigate('/dashboard');
     } catch (err: any) {
       setErrors({ general: err.message || t('register.errors.generic') });

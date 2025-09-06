@@ -60,17 +60,28 @@ const LoginPage: React.FC = () => {
     setError(null);
 
     try {
+      // ✅ Logging attempt
       await loggingService.logEvent('login_attempt', {
         username: formData.username,
         timestamp: new Date().toISOString(),
         userAgent: navigator.userAgent
       });
 
+      // ✅ Login
       const response: AuthResponse = await authService.login({
         username: formData.username,
         password: formData.password
       });
 
+      // ✅ Tokens
+      const tokens = {
+        accessToken: response.accessToken,
+        refreshToken: response.refreshToken,
+        expiresIn: response.expiresIn || 3600,
+        tokenType: 'Bearer'
+      };
+
+      // ✅ User data
       const userData = {
         id: response.user.id,
         email: response.user.email,
@@ -85,15 +96,10 @@ const LoginPage: React.FC = () => {
         updatedAt: new Date().toISOString()
       };
 
-      const tokens = {
-        accessToken: response.accessToken,
-        refreshToken: response.refreshToken,
-        expiresIn: response.expiresIn || 3600,
-        tokenType: 'Bearer'
-      };
+      // ✅ Correct order: tokens first, user second
+      setAuthData(tokens, userData);
 
-      setAuthData(userData, tokens);
-
+      // ✅ Logging success
       await loggingService.logEvent('login_success', {
         userId: userData.id,
         email: userData.email,
@@ -104,6 +110,8 @@ const LoginPage: React.FC = () => {
     } catch (err: any) {
       console.error('Login failed:', err);
       setError(t('login.authFailed'));
+
+      // ✅ Logging failure
       await loggingService.logEvent('login_failure', {
         username: formData.username,
         error: err.message,
@@ -144,6 +152,7 @@ const LoginPage: React.FC = () => {
             {isLoading ? t('login.loading') : t('login.signIn')}
           </button>
         </form>
+
         <select value={i18n.language} onChange={handleLanguageChange}>
           <option value="en">{t('language.english')}</option>
           <option value="pt">{t('language.portuguese')}</option>
