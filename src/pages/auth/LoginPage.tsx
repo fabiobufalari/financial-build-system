@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { authService, AuthResponse } from '../../services/authService';
+// Certifique-se de que AuthResponse, AuthTokens e UserData são exportados de authService
+// OU ajuste o caminho se elas estiverem em um arquivo de tipos separado (e.g., ../../types/auth)
+import { authService, AuthResponse, AuthTokens, UserData } from '../../services/authService'; 
 import { loggingService } from '../../services/loggingService';
 import { useAuthStore } from '../../stores/authStore';
 import './LoginPage.css';
@@ -20,7 +22,8 @@ interface ApiStatus {
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
-  const { setAuthData } = useAuthStore();
+  // setAuthData espera (tokens: AuthTokens, userData: UserData)
+  const { setAuthData } = useAuthStore(); 
 
   const [formData, setFormData] = useState<LoginFormData>({ username: '', password: '' });
   const [isLoading, setIsLoading] = useState(false);
@@ -34,9 +37,26 @@ const LoginPage: React.FC = () => {
   useEffect(() => {
     const checkApiStatus = async () => {
       try {
-        await fetch(apiStatus.endpoint, { method: 'HEAD', mode: 'no-cors' });
-        setApiStatus(prev => ({ ...prev, connected: true }));
-      } catch {
+        // Para uma checagem de status de API mais robusta, é melhor usar um endpoint que retorne 200 OK.
+        // O `mode: 'no-cors'` com `HEAD` pode não ser confiável para determinar conectividade real da API,
+        // pois ele não revelará erros de rede (cors, etc.) e pode retornar sucesso mesmo que o servidor não responda.
+        // Se houver um endpoint /health ou /status na sua API, use-o.
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 segundos de timeout
+        
+        const response = await fetch(apiStatus.endpoint.replace('/auth/login', '/health') || apiStatus.endpoint, { 
+          method: 'GET', // Usar GET é mais comum para health checks
+          signal: controller.signal // Adicionar o signal para o timeout
+        });
+        clearTimeout(timeoutId);
+
+        if (response.ok) { // Verifica se a resposta foi bem-sucedida (status 2xx)
+          setApiStatus(prev => ({ ...prev, connected: true }));
+        } else {
+          setApiStatus(prev => ({ ...prev, connected: false }));
+        }
+      } catch (e: any) {
+        console.warn('API health check failed:', e);
         setApiStatus(prev => ({ ...prev, connected: false }));
       }
     };
@@ -68,32 +88,34 @@ const LoginPage: React.FC = () => {
       });
 
       // ✅ Login
+      // A resposta agora é do tipo AuthResponse, que inclui accessToken, refreshToken, expiresIn e user
       const response: AuthResponse = await authService.login({
         username: formData.username,
         password: formData.password
       });
 
-      // ✅ Tokens
-      const tokens = {
+      // ✅ Tokens (extraídos diretamente da resposta)
+      const tokens: AuthTokens = {
         accessToken: response.accessToken,
         refreshToken: response.refreshToken,
-        expiresIn: response.expiresIn || 3600,
-        tokenType: 'Bearer'
+        expiresIn: response.expiresIn || 3600, // Usar fallback se expiresIn for opcional na resposta
+        tokenType: 'Bearer' // Assumindo que é sempre 'Bearer'
       };
 
-      // ✅ User data
-      const userData = {
+      // ✅ User data (extraídos diretamente da resposta e mapeados para UserData)
+      const userData: UserData = {
         id: response.user.id,
         email: response.user.email,
         firstName: response.user.firstName,
         lastName: response.user.lastName,
-        role: response.user.roles[0] || 'USER',
+        // Garante que roles é um array de strings
+        role: response.user.roles && response.user.roles.length > 0 ? response.user.roles[0] : 'USER', 
         permissions: response.user.permissions || ['READ'],
-        companyId: '',
-        isActive: true,
-        lastLogin: new Date().toISOString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        companyId: response.user.companyId || '', // Adicionado, se sua API retornar companyId
+        isActive: response.user.isActive ?? true, // Adicionado, se sua API retornar isActive
+        lastLogin: response.user.lastLogin || new Date().toISOString(), // Adicionado, se sua API retornar lastLogin
+        createdAt: response.user.createdAt || new Date().toISOString(), // Adicionado, se sua API retornar createdAt
+        updatedAt: response.user.updatedAt || new Date().toISOString() // Adicionado, se sua API retornar updatedAt
       };
 
       // ✅ Correct order: tokens first, user second
@@ -109,7 +131,9 @@ const LoginPage: React.FC = () => {
       navigate('/dashboard');
     } catch (err: any) {
       console.error('Login failed:', err);
-      setError(t('login.authFailed'));
+      // Se a sua AuthResponse tiver uma propriedade `message` para erros, você pode usá-la.
+      // Caso contrário, o erro genérico está OK.
+      setError(err.message || t('login.authFailed')); 
 
       // ✅ Logging failure
       await loggingService.logEvent('login_failure', {
