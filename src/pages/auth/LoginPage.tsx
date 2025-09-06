@@ -112,45 +112,47 @@ const LoginPage: React.FC = () => {
     setError(null);
 
     try {
-      // Log login attempt
+      // ✅ Corrigido: log do login
       await loggingService.logEvent('login_attempt', {
         username: formData.username,
         timestamp: new Date().toISOString(),
         userAgent: navigator.userAgent
       });
 
-      // Attempt authentication
-      const response = await authService.login(formData.username, formData.password);
-      
-      if (response.success && response.data) {
-        // Create user object with available data
-        const userData = {
-		  id: response.data.user?.id || '',
-		  email: formData.username,
-		  name: response.data.user?.name || formData.username,
-		  role: response.data.user?.role || 'user'
-		};
+      // ✅ Corrigido: login usando authService.login
+      const loginResponse = await authService.login({
+        username: formData.username,
+        password: formData.password
+      });
 
-        // Set authentication data
-        setAuthData(userData, response.data.tokens);
+      // ✅ Corrigido: criar userData e tokens compatíveis com store
+      const userData = {
+        id: loginResponse.user.id,
+        email: loginResponse.user.email,
+        name: loginResponse.user.firstName,
+        role: loginResponse.user.roles[0] || 'user'
+      };
 
-        // Log successful login
-        await loggingService.logEvent('login_success', {
-          userId: userData.id,
-          email: userData.email,
-          timestamp: new Date().toISOString()
-        });
+      const tokens = {
+        accessToken: loginResponse.accessToken,
+        refreshToken: loginResponse.refreshToken,
+        expiresIn: loginResponse.expiresIn,
+        tokenType: 'Bearer'
+      };
 
-        // Navigate to dashboard
-        navigate('/dashboard');
-      } else {
-        throw new Error(response.message || 'Authentication failed');
-      }
+      // ✅ Corrigido: passar parâmetros na ordem correta
+      setAuthData(userData, tokens);
+
+      await loggingService.logEvent('login_success', {
+        userId: userData.id,
+        email: userData.email,
+        timestamp: new Date().toISOString()
+      });
+
+      navigate('/dashboard');
     } catch (error: any) {
       console.error('Login error:', error);
       setError('Authentication failed. Please check your credentials.');
-      
-      // Log failed login attempt
       await loggingService.logEvent('login_failure', {
         username: formData.username,
         error: error.message,
