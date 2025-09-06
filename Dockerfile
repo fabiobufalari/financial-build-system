@@ -5,8 +5,13 @@ FROM node:18-alpine AS builder
 LABEL stage="builder"
 WORKDIR /app
 
+# ✅ Configurações de NPM para resolver problemas de rede/timeout no estágio de build
+RUN npm config set registry https://registry.npmjs.org/ --global && \
+    npm config set strict-ssl false --global && \
+    npm config set fetch-retry-maxtimeout 60000 --global
+
 COPY package*.json ./
-RUN npm ci
+RUN npm ci # ✅ npm ci usará as configurações acima
 COPY . .
 RUN npm run build
 # OPCIONAL: Verifique o conteúdo após o build:
@@ -23,7 +28,12 @@ ENV NODE_ENV=production
 
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
-RUN npm install -g serve
+# ✅ Configurações de NPM para resolver problemas de rede/timeout no estágio de produção
+RUN npm config set registry https://registry.npmjs.org/ --global && \
+    npm config set strict-ssl false --global && \
+    npm config set fetch-retry-maxtimeout 60000 --global
+
+RUN npm install -g serve # ✅ npm install -g serve usará as configurações acima
 
 # Copia a pasta de build do Vite (geralmente 'dist')
 COPY --from=builder /app/dist ./dist
@@ -31,7 +41,7 @@ COPY --from=builder /app/dist ./dist
 RUN chown -R appuser:appgroup /app
 USER appuser
 
-EXPOSE 3000 
+EXPOSE 3000
 
 # -s indica single-page application mode
 # -l 3000 escuta na porta 3000
