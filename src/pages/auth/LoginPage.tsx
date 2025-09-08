@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-// ✅ Importe AuthResponse, AuthTokens e UserData do authService
-import { authService, AuthResponse, AuthTokens, UserData } from '../../services/authService'; 
-import { loggingService } from '../../services/loggingService'; // Assumo que o caminho está correto
+import { authService, AuthResponse, AuthTokens, UserData } from '../../services/authService';
+import { loggingService } from '../../services/loggingService';
 import { useAuthStore } from '../../stores/authStore';
 import './LoginPage.css';
 
@@ -21,10 +20,12 @@ interface ApiStatus {
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
-  // setAuthData espera (tokens: AuthTokens, userData: UserData)
-  const { setAuthData } = useAuthStore(); 
+  const { setAuthData } = useAuthStore();
 
-  const [formData, setFormData] = useState<LoginFormData>({ username: '', password: '' });
+  const [formData, setFormData] = useState<LoginFormData>({
+    username: '',
+    password: ''
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [apiStatus, setApiStatus] = useState<ApiStatus>({
@@ -36,40 +37,40 @@ const LoginPage: React.FC = () => {
   useEffect(() => {
     const checkApiStatus = async () => {
       try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000); 
-        
-        // Use o endpoint de health check do authService, se existir, ou ajuste o caminho.
-        // authService.checkApiHealth() é uma boa opção se você quiser que o authService gerencie isso.
-        const response = await fetch(apiStatus.endpoint.replace('/auth/login', '/health') || apiStatus.endpoint, { 
-          method: 'GET', 
-          signal: controller.signal 
+        const response = await fetch(apiStatus.endpoint, {
+          method: 'HEAD',
+          mode: 'no-cors'
         });
-        clearTimeout(timeoutId);
-
-        if (response.ok) { 
-          setApiStatus(prev => ({ ...prev, connected: true }));
-        } else {
-          setApiStatus(prev => ({ ...prev, connected: false }));
-        }
-      } catch (e: any) {
-        console.warn('API health check failed:', e);
+        setApiStatus(prev => ({ ...prev, connected: true }));
+      } catch (error) {
         setApiStatus(prev => ({ ...prev, connected: false }));
       }
     };
+
     checkApiStatus();
   }, [apiStatus.endpoint]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    if (error) setError(null);
+  const handleLanguageChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedLanguage = event.target.value;
+    i18n.changeLanguage(selectedLanguage);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = event.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    if (error) {
+      setError(null);
+    }
+  };
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    
     if (!formData.username || !formData.password) {
-      setError(t('login.fillAllFields'));
+      setError('Please fill in all fields');
       return;
     }
 
@@ -77,84 +78,182 @@ const LoginPage: React.FC = () => {
     setError(null);
 
     try {
-      // ✅ Chamada ao método específico de login do loggingService, ou ajuste seu `logEvent`
-      // O `logEvent` no `loggingService` que você forneceu é genérico.
-      // Vou usar `loggingService.logLogin` que é mais adequado para este propósito.
-      // Se você REALMENTE precisa de `logEvent` com essa assinatura, avise-me.
+      // Log login attempt
       await loggingService.logLogin(formData.username, false, 'CREDENTIALS', 'Login attempt');
 
-      // ✅ Login - a resposta agora é do tipo AuthResponse
+      // Attempt authentication
       const response: AuthResponse = await authService.login({
         username: formData.username,
         password: formData.password
       });
+      
+      if (response.tokens && response.user) {
+        const userData: UserData = response.user;
+        const tokens: AuthTokens = response.tokens;
 
-      // ✅ Os tokens e dados do usuário já vêm aninhados na 'response'
-      const tokens: AuthTokens = response.tokens;
-      const userData: UserData = response.user;
+        // Set authentication data
+        setAuthData(userData, tokens);
 
-      // ✅ Passa os objetos completos para setAuthData
-      setAuthData(tokens, userData);
+        // Log successful login
+        await loggingService.logLogin(userData.username, true, 'CREDENTIALS');
 
-      // ✅ Logging success
-      await loggingService.logLogin(userData.username, true, 'CREDENTIALS');
-
-      navigate('/dashboard');
-    } catch (err: any) {
-      console.error('Login failed:', err);
-      // Use a mensagem de erro da exceção lançada pelo authService
-      setError(err.message || t('login.authFailed')); 
-
-      // ✅ Logging failure
+        // Navigate to dashboard
+        navigate('/dashboard');
+      } else {
+        throw new Error('Authentication failed');
+      }
+    } catch (error: any) {
+      console.error('Login error:', error);
+      setError('Authentication failed. Please check your credentials.');
+      
+      // Log failed login attempt
       await loggingService.logLogin(
         formData.username,
         false,
         'CREDENTIALS',
-        err.message || 'Authentication failed.'
+        error.message || 'Authentication failed.'
       );
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleLanguageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    i18n.changeLanguage(e.target.value);
+  const handleRefreshStatus = async () => {
+    setApiStatus(prev => ({ ...prev, connected: false }));
+    
+    try {
+      const response = await fetch(apiStatus.endpoint, {
+        method: 'HEAD',
+        mode: 'no-cors'
+      });
+      setApiStatus(prev => ({ ...prev, connected: true }));
+    } catch (error) {
+      setApiStatus(prev => ({ ...prev, connected: false }));
+    }
   };
 
   return (
     <div className="login-container">
+      {/* Animated background particles */}
+      <div className="particle"></div>
+      <div className="particle"></div>
+      <div className="particle"></div>
+
+      {/* Language selector */}
+      <div className="language-selector">
+        <select 
+          className="language-select"
+          value={i18n.language}
+          onChange={handleLanguageChange}
+          aria-label="Select Language"
+        >
+          {[
+            { code: 'en', label: '🇺🇸 English' },
+            { code: 'pt', label: '🇧🇷 Português' },
+            { code: 'fr', label: '🇫🇷 Français' },
+            { code: 'zh', label: '🇨🇳 中文' },
+            { code: 'ar', label: '🇸🇦 العربية' }
+          ].map((option) => (
+            <option key={option.code} value={option.code}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Main login card */}
       <div className="login-card">
-        <h1>{t('login.title')}</h1>
-        <form onSubmit={handleSubmit}>
-          <input
-            type="text"
-            name="username"
-            placeholder={t('login.username')}
-            value={formData.username}
-            onChange={handleInputChange}
+        {/* Header */}
+        <div className="login-header">
+          <div className="construction-icon">
+            🏗️
+          </div>
+          <h1 className="login-title">Building Dreams</h1>
+          <p className="login-subtitle">Financial Build System</p>
+        </div>
+
+        {/* Login form */}
+        <form className="login-form" onSubmit={handleSubmit}>
+          <div className="form-group">
+            <div className="input-icon">👤</div>
+            <input
+              type="text"
+              name="username"
+              className="form-input"
+              placeholder="Username"
+              value={formData.username}
+              onChange={handleInputChange}
+              disabled={isLoading}
+              autoComplete="username"
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <div className="input-icon">🔒</div>
+            <input
+              type="password"
+              name="password"
+              className="form-input"
+              placeholder="Password"
+              value={formData.password}
+              onChange={handleInputChange}
+              disabled={isLoading}
+              autoComplete="current-password"
+              required
+            />
+          </div>
+
+          <button
+            type="submit"
+            className={`login-button ${isLoading ? 'loading' : ''}`}
             disabled={isLoading}
-          />
-          <input
-            type="password"
-            name="password"
-            placeholder={t('login.password')}
-            value={formData.password}
-            onChange={handleInputChange}
-            disabled={isLoading}
-          />
-          {error && <div className="error-message">{error}</div>}
-          <button type="submit" disabled={isLoading}>
-            {isLoading ? t('login.loading') : t('login.signIn')}
+          >
+            {isLoading ? (
+              <>
+                <div className="loading-spinner"></div>
+                Loading...
+              </>
+            ) : (
+              'LOGIN'
+            )}
           </button>
+
+          {error && (
+            <div className="error-message">
+              ⚠️ {error}
+            </div>
+          )}
         </form>
 
-        <select value={i18n.language} onChange={handleLanguageChange}>
-          <option value="en">{t('language.english')}</option>
-          <option value="pt">{t('language.portuguese')}</option>
-          <option value="fr">{t('language.french')}</option>
-          <option value="zh">{t('language.chinese')}</option>
-          <option value="ar">{t('language.arabic')}</option>
-        </select>
+        {/* Forgot password link */}
+        <div className="forgot-password">
+          <a href="#forgot">Forgot password?</a>
+        </div>
+
+        {/* API Status */}
+        <div className="api-status">
+          <div className="api-status-header">
+            <div className={`status-indicator ${apiStatus.connected ? 'connected' : ''}`}></div>
+            <span className="api-status-title">📊 API Status:</span>
+          </div>
+          <div className="api-status-details">
+            <div><strong>Endpoint:</strong> {apiStatus.endpoint}</div>
+            <div><strong>Mode:</strong> {apiStatus.mode}</div>
+            <div><strong>Status:</strong> {apiStatus.connected ? 'Connected' : 'Disconnected'}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer credits */}
+      <div className="login-footer">
+        <div className="developer-credits">
+          Developed by Fabio Bufalari
+        </div>
+        <div className="contact-info">
+          Contact: <a href="mailto:bufalari.fabio@gmail.com">bufalari.fabio@gmail.com</a><br />
+          15 years of experience delivering innovative technology solutions
+        </div>
       </div>
     </div>
   );

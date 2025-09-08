@@ -262,4 +262,3 @@ export interface SuccessResponse<T = any> {
 }
 
 export type ApiResponseType<T = any> = SuccessResponse<T> | ErrorResponse;
-

@@ -497,21 +497,3 @@ class LoggingService {
       sessionStartTime: this.sessionId.split('_')[1]
     };
   }
-
-  /**
-   * Clear all stored activities
-   * EN: Clears all locally stored activities
-   * PT: Limpa todas as atividades armazenadas localmente
-   */
-  clearStoredActivities(): void {
-    localStorage.removeItem('pendingActivities');
-    this.activityQueue = [];
-  }
-}
-
-// Create singleton instance
-export const loggingService = new LoggingService();
-export default loggingService;
-
-
-
