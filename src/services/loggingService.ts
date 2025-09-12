@@ -497,3 +497,5 @@ class LoggingService {
       sessionStartTime: this.sessionId.split('_')[1]
     };
   }
+}
+export const loggingService = new LoggingService();

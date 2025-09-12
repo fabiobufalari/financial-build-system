@@ -4,16 +4,17 @@
 
 export interface User {
   id: string;
+  username: string;
   email: string;
   firstName: string;
   lastName: string;
   role: string;
   permissions: string[];
   companyId?: string;
-  isActive: boolean;
+  isActive?: boolean;
   lastLogin?: string;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface AuthTokens {
@@ -63,8 +64,8 @@ export interface Company {
   address: string;
   taxId: string;
   isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Person {
@@ -77,8 +78,8 @@ export interface Person {
   dateOfBirth?: string;
   documentNumber?: string;
   isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Employee {
@@ -101,8 +102,8 @@ export interface Employee {
       longitude: number;
     };
   };
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Project {
@@ -116,8 +117,8 @@ export interface Project {
   companyId: string;
   managerId: string;
   location: string;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Material {
@@ -129,8 +130,8 @@ export interface Material {
   category: string;
   supplier?: string;
   isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Supplier {
@@ -142,8 +143,8 @@ export interface Supplier {
   taxId: string;
   category: string;
   isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface AccountsPayable {
@@ -156,8 +157,8 @@ export interface AccountsPayable {
   description: string;
   invoiceNumber?: string;
   companyId: string;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface AccountsReceivable {
@@ -170,8 +171,8 @@ export interface AccountsReceivable {
   description: string;
   invoiceNumber?: string;
   companyId: string;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface CashFlow {
@@ -183,8 +184,8 @@ export interface CashFlow {
   category: string;
   companyId: string;
   projectId?: string;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface DashboardStats {
@@ -229,7 +230,7 @@ export interface NotificationData {
   title: string;
   message: string;
   isRead: boolean;
-  createdAt: string;
+  createdAt?: string;
 }
 
 export interface PaginationParams {

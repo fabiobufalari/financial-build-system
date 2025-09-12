@@ -40,6 +40,7 @@ export interface UserData {
   email: string;
   firstName: string;
   lastName: string;
+  role: string;
   roles: string[];
   permissions: string[]; // Calculadas no frontend
   companyId?: string;
@@ -91,6 +92,7 @@ class AuthService {
         email: realResponse.email,
         firstName: realResponse.firstName,
         lastName: realResponse.lastName,
+	role: realResponse.roles[0] || 'USER',
         roles: realResponse.roles,
         permissions,
         companyId: realResponse.companyId,

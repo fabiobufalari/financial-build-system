@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -80,15 +81,16 @@ const RegisterPage: React.FC = () => {
       });
 
       // ✅ Tokens primeiro, user depois (compatível com store)
-      const tokens = {
-        accessToken: response.accessToken,
-        refreshToken: response.refreshToken,
-        expiresIn: response.expiresIn || 3600,
-        tokenType: 'Bearer'
-      };
+     const tokens = {
+  	accessToken: response.tokens.accessToken,
+  	refreshToken: response.tokens.refreshToken,
+  	expiresIn: response.tokens.expiresIn,
+	tokenType: response.tokens.tokenType
+	};
 
       const userData = {
         id: response.user.id,
+  username: response.user.username,
         email: response.user.email,
         firstName: response.user.firstName,
         lastName: response.user.lastName,
@@ -101,7 +103,7 @@ const RegisterPage: React.FC = () => {
         updatedAt: new Date().toISOString()
       };
 
-      setAuthData(tokens, userData);
+      setAuthData(userData, tokens);
       navigate('/dashboard');
     } catch (err: any) {
       setErrors({ general: err.message || t('register.errors.generic') });
